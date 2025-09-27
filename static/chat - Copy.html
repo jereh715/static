@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Product Search Chat</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: white;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    #tab-placeholder {
+      background-color: #f2f2f2;
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .chat-message {
+      margin-bottom: 10px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      max-width: 80%;
+      word-wrap: break-word;
+    }
+
+    .chat-message.bot {
+      align-self: flex-start;
+      background-color: #f0f0f0;
+      color: #333;
+    }
+
+    .chat-message.user {
+      align-self: flex-end;
+      background-color: #007bff;
+      color: white;
+    }
+
+    .input-container {
+      display: flex;
+      border-top: 1px solid #ccc;
+      padding: 10px;
+      background-color: #fff;
+      margin-bottom: 60px; /* Offset if needed */
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 10px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    button {
+      margin-left: 10px;
+      padding: 10px 15px;
+      font-size: 16px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .product-card {
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      padding: 10px;
+      margin: 10px 0;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      background-color: #f9f9f9;
+      max-width: 90%;
+    }
+
+    .product-card img {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 8px;
+    }
+
+    .product-info {
+      flex: 1;
+    }
+
+    .product-info div {
+      margin-bottom: 4px;
+    }
+
+    .product-info .title {
+      font-weight: bold;
+    }
+
+    .product-info .price {
+      color: #007bff;
+    }
+
+    .product-info .source {
+      font-size: 12px;
+      color: #777;
+    }
+
+    .product-info a {
+      font-size: 14px;
+      color: #007bff;
+      text-decoration: none;
+    }
+
+    .product-info a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <!-- Optional bottom navigation -->
+  <div id="tab-placeholder"></div>
+
+  <!-- Chat messages -->
+  <div class="chat-container" id="chat-box">
+    <div class="chat-message bot">Hello, what product are you looking for?</div>
+  </div>
+
+  <!-- Text input -->
+  <div class="input-container">
+    <input type="text" id="chat-input" placeholder="Type a product name..." />
+    <button onclick="sendMessage()">Send</button>
+  </div>
+
+  <script>
+    fetch('/tab.html')
+      .then(res => res.text())
+      .then(html => {
+        document.getElementById('tab-placeholder').innerHTML = html;
+      });
+
+    function sendMessage() {
+      const input = document.getElementById('chat-input');
+      const query = input.value.trim();
+      if (!query) return;
+
+      const chatBox = document.getElementById('chat-box');
+
+      // User message
+      const userMsg = document.createElement('div');
+      userMsg.className = 'chat-message user';
+      userMsg.textContent = query;
+      chatBox.appendChild(userMsg);
+      input.value = '';
+
+      // Loading message
+      const loadingMsg = document.createElement('div');
+      loadingMsg.className = 'chat-message bot';
+      loadingMsg.textContent = `Searching for "${query}"...`;
+      chatBox.appendChild(loadingMsg);
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      const source = new EventSource(`http://127.0.0.1:5000/scrape?q=${encodeURIComponent(query)}`);
+
+      source.onmessage = function(event) {
+        if (loadingMsg.parentNode) {
+          loadingMsg.remove();
+        }
+
+        try {
+          const data = JSON.parse(event.data);
+          const type = data.type;
+
+          if (type === 'info') {
+            showBotMessage(data.message);
+          } else if (type === 'error') {
+            showBotMessage(data.message, true);
+          } else if (type === 'product') {
+            showProductCard(data);
+          }
+        } catch (e) {
+          console.error("Invalid message:", event.data);
+        }
+
+        chatBox.scrollTop = chatBox.scrollHeight;
+      };
+
+      source.onerror = function(err) {
+        console.error("SSE error", err);
+        source.close();
+        showBotMessage("An error occurred while searching for products.", true);
+      };
+
+      function showBotMessage(text, isError = false) {
+        const msg = document.createElement('div');
+        msg.className = 'chat-message bot';
+        msg.style.color = isError ? 'red' : '#333';
+        msg.textContent = text;
+        chatBox.appendChild(msg);
+      }
+
+      function showProductCard(product) {
+        const card = document.createElement('div');
+        card.className = 'product-card';
+
+        const img = document.createElement('img');
+        img.src = product.image_url || '';
+        img.alt = product.title;
+
+        const info = document.createElement('div');
+        info.className = 'product-info';
+
+        const title = document.createElement('div');
+        title.className = 'title';
+        title.textContent = product.title;
+
+        const price = document.createElement('div');
+        price.className = 'price';
+        price.textContent = product.price;
+
+        const source = document.createElement('div');
+        source.className = 'source';
+        source.textContent = product.source;
+
+        const link = document.createElement('a');
+        link.href = product.link;
+        link.target = '_blank';
+        link.textContent = 'View Product';
+
+        info.appendChild(title);
+        info.appendChild(price);
+        info.appendChild(source);
+        info.appendChild(link);
+
+        card.appendChild(img);
+        card.appendChild(info);
+
+        chatBox.appendChild(card);
+      }
+    }
+  </script>
+</body>
+</html>

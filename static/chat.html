@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Saved Products</title>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/style.css">
+<style>
+  body {
+    padding: 0;
+    margin: 0;
+    font-family: 'Quicksand', sans-serif;
+    padding-bottom: 60px; /* optional if you had space for bottom nav */
+  }
+
+  /* product grid */
+  #products {
+    margin-top: 10px;
+    padding: 10px;
+  }
+
+  /* close button inside product */
+  .product {
+    position: relative;
+    margin-bottom: 12px;
+  }
+  .close-btn {
+    position: absolute;
+    top: 6px; right: 6px;
+    width: 20px; height: 20px;
+    background: maroon;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    font-size: 14px;
+    font-weight: bold;
+    line-height: 18px;
+    text-align: center;
+    cursor: pointer;
+    opacity: 0.85;
+    transition: opacity 0.2s;
+  }
+  .close-btn:hover { opacity: 1; }
+
+  /* Hamburger Menu */
+  #hamburger-menu {
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    z-index: 3000;
+  }
+
+  #menu-btn {
+    background: white;
+    border: none;
+    font-size: 24px;
+    padding: 8px 12px;
+    border-radius: 25px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    cursor: pointer;
+    position: relative;
+    z-index: 3100; /* above overlay */
+  }
+
+  #menu-panel {
+    position: fixed;
+    top: 0;
+    left: -220px; /* hidden initially */
+    width: 200px;
+    height: 100%;
+    background: #fff;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    padding-top: 60px;
+    transition: left 0.3s ease;
+    z-index: 3200;
+  }
+
+  #menu-panel a {
+    padding: 15px;
+    text-decoration: none;
+    color: #333;
+    border-bottom: 1px solid #eee;
+  }
+
+  #menu-panel a:hover {
+    background: #f5f5f5;
+  }
+
+  #menu-panel.active {
+    left: 0;
+  }
+
+  #menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.25);
+    display: none;
+    z-index: 3100;
+  }
+
+  #menu-overlay.active {
+    display: block;
+  }
+
+  /* product actions */
+  .product-actions {
+    margin-top: 8px;
+  }
+  .product-actions .view-btn {
+    padding: 6px 12px;
+    background: #337AFF;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .product-actions .view-btn:hover {
+    background: #0056e0;
+  }
+
+  .offer-tag {
+    margin-left: 6px;
+    font-size: 0.75em;
+    color: #FF0000;
+    font-weight: bold;
+  }
+</style>
+</head>
+<body>
+
+<div id="products"></div>
+
+<!-- Hamburger Menu -->
+<div id="hamburger-menu">
+  <button id="menu-btn">☰</button>
+
+  <!-- Side menu panel -->
+  <div id="menu-panel">
+    <a href="/">Browse</a>
+    <a href="/chat">Chat</a>
+    <a href="/offers">Offers</a>
+  </div>
+
+  <!-- Overlay -->
+  <div id="menu-overlay"></div>
+</div>
+
+<script>
+/* ----------- Utility: send link to backend ----------- */
+function sendProductLink(link) {
+  if (!link) return;
+  fetch("http://127.0.0.1:5000/open-link", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url: link })
+  })
+  .then(res => {
+    if (res.ok) {
+      alert("✅ Opening in browser...");
+    } else {
+      alert("⚠️ Failed to open link");
+    }
+  })
+  .catch(() => alert("⚠️ Error sending link"));
+}
+
+/* ----------- Saved Products Logic ----------- */
+function renderProductHTML(product, index) {
+  const imgSrc = product.image_url || product.image || "";
+  const prodLink = product.link || product.product_link || "#";
+  return `
+    <div class="product${product.offer ? ' offer' : ''}">
+      <button class="close-btn" onclick="removeProduct(${index})">×</button>
+      <img src="${imgSrc}" alt="${product.title}" style="width:100%; border-radius:8px;">
+      <h3>${product.title}${product.offer ? '<span class="offer-tag">OFFER</span>' : ''}</h3>
+      <p><strong class="price">${product.price || ''}</strong></p>
+      <p>Source: ${product.source || 'N/A'}</p>
+      <div class="product-actions">
+        <button class="view-btn" onclick="sendProductLink('${prodLink}')">View Product</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderSaved() {
+  const container = document.getElementById("products");
+  const saved = JSON.parse(localStorage.getItem("savedProducts") || "[]");
+
+  if (!saved.length) {
+    container.innerHTML = "<p>No saved products yet.</p>";
+    return;
+  }
+  container.innerHTML = saved.map((p, i) => renderProductHTML(p, i)).join("");
+}
+
+function removeProduct(index) {
+  const saved = JSON.parse(localStorage.getItem("savedProducts") || "[]");
+  saved.splice(index, 1);
+  localStorage.setItem("savedProducts", JSON.stringify(saved));
+  renderSaved();
+}
+
+renderSaved();
+
+/* ----------- Hamburger Menu Logic ----------- */
+(function() {
+  const menuBtn = document.getElementById("menu-btn");
+  const menuPanel = document.getElementById("menu-panel");
+  const menuOverlay = document.getElementById("menu-overlay");
+
+  if (!menuBtn || !menuPanel || !menuOverlay) {
+    console.error("Menu elements not found!");
+    return;
+  }
+
+  menuBtn.addEventListener("click", () => {
+    const isActive = menuPanel.classList.toggle("active");
+    menuOverlay.classList.toggle("active", isActive);
+  });
+
+  menuOverlay.addEventListener("click", () => {
+    menuPanel.classList.remove("active");
+    menuOverlay.classList.remove("active");
+  });
+})();
+</script>
+
+</body>
+</html>

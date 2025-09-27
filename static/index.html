@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Search</title>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="preload" href="/static/sans.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+  <style>
+    /* Overlay CSS */
+    #overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      background: rgba(0,0,0,0.8);
+      flex-direction: column;
+      z-index: 1000;
+    }
+    #overlayTitle {
+      color: white;
+      font-size: 1.5rem;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 1rem;
+      max-width: 90%;
+      word-wrap: break-word;
+    }
+    #overlayImg {
+      max-width: 90%;
+      max-height: 80%;
+      border-radius: 1rem;
+    }
+    /* Spinner */
+    #storeSpinner {
+      display: none;
+      width: 10px;
+      height: 10px;
+      border: 3px solid rgba(0,0,0,0.3);
+      border-top: 3px solid red;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 🔹 Hamburger Menu -->
+  <div id="hamburger-menu">
+    <button id="menu-btn">☰</button>
+    <div id="menu-panel">
+      <a href="/">Browse</a>
+      <a href="/chat">Saved</a>
+      <a href="/offers">Offers</a>
+    </div>
+    <div id="menu-overlay"></div>
+  </div>
+
+  <!-- 🔹 Search Section -->
+  <div class="search-container">
+    <input type="text" id="query" placeholder="Search for a product..." onkeydown="if (event.key === 'Enter') search()">
+    <button onclick="search()">
+      <img src="https://img.icons8.com/?size=100&id=112468&format=png&color=000000" alt="Search">
+    </button>
+  </div>
+
+  <div id="sort-buttons">
+    <button class="sort-btn" onclick="sortProducts('cheap')">→High</button>
+    <button class="sort-btn" onclick="sortProducts('expensive')">→Low</button>
+    <button class="sort-btn" onclick="toggleMaxPriceInput()">Budget</button>
+    <input type="number" id="maxPriceInput" placeholder="Enter max" oninput="sortProducts()">
+    <button class="sort-btn store-sort-btn" onclick="showStoreOverlay()">Store</button>
+  </div>
+
+  <div id="results"></div>
+
+  <!-- 🔹 Image Overlay -->
+  <div id="overlay" onclick="hideOverlay()">
+    <span id="closeBtn" onclick="hideOverlay(event)">×</span>
+    <div id="overlayTitle"></div>
+    <img id="overlayImg" src="" alt="Zoomed Image">
+  </div>
+
+  <!-- 🔹 Popups -->
+  <div id="popupContainer">
+    <div class="popupMessage stores">
+      <span id="storeCount">0 stores</span>
+      <span id="storeSpinner"></span>
+    </div>
+  </div>
+
+  <!-- 🔹 Store Overlay -->
+  <div id="storeOverlay" onclick="hideStoreOverlay(event)">
+    <div class="store-overlay-content">
+      <span id="storeOverlayClose" onclick="hideStoreOverlay(event)">×</span>
+      <h2>Select a Store</h2>
+      <div id="storeGrid"></div>
+    </div>
+  </div>
+
+  <script>
+  /* ---------------- UTILITY: CLEAN STORE NAME ---------------- */
+  function cleanStoreName(name) {
+    if (!name) return "";
+    return name.replace(/^(kutoka\s+)/i, "").trim();
+  }
+
+  /* ---------------- SEND PRODUCT LINK TO BACKEND ---------------- */
+  function sendProductLink(link) {
+    if (!link) return;
+    fetch("http://127.0.0.1:5000/open-link", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: link })
+    })
+    .then(res => {
+      if (res.ok) {
+        addPopup("opening in browser");
+      } else {
+        addPopup("failed to open");
+      }
+    })
+    .catch(() => addPopup("⚠️ Error sending link"));
+  }
+
+  /* ---------------- HAMBURGER MENU ---------------- */
+  (function() {
+    const menuBtn = document.getElementById("menu-btn");
+    const menuPanel = document.getElementById("menu-panel");
+    const menuOverlay = document.getElementById("menu-overlay");
+
+    if (!menuBtn || !menuPanel || !menuOverlay) {
+      console.error("Menu elements not found!");
+      return;
+    }
+
+    menuBtn.addEventListener("click", () => {
+      const isActive = menuPanel.classList.toggle("active");
+      menuOverlay.classList.toggle("active", isActive);
+    });
+
+    menuOverlay.addEventListener("click", () => {
+      menuPanel.classList.remove("active");
+      menuOverlay.classList.remove("active");
+    });
+  })();
+
+  /* ---------------- RANDOM SORT BUTTON COLORS ---------------- */
+  document.addEventListener("DOMContentLoaded", () => {
+    const buttons = document.querySelectorAll("button.sort-btn");
+    const colors = ["sort-blue", "sort-green", "sort-orange"];
+    for (let i = colors.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [colors[i], colors[j]] = [colors[j], colors[i]];
+    }
+    buttons.forEach((btn, index) => btn.classList.add(colors[index % colors.length]));
+  });
+
+  /* ---------------- PRODUCT SEARCH & SORT ---------------- */
+  const globalStoreSet = new Set();
+  let allCachedProducts = [];
+  let renderedCount = 0;
+  const BATCH_SIZE = 5;
+
+  // ---------- ADD TO CACHE ----------
+  function addToCache(product) {
+    const key = "savedProducts";
+    const existing = JSON.parse(localStorage.getItem(key) || "[]");
+    if (!existing.some(p => (p.link || p.product_link) === (product.link || product.product_link))) {
+      existing.push(product);
+      localStorage.setItem(key, JSON.stringify(existing));
+    }
+    addPopup("➕ Saved!");
+  }
+
+  // ---------- PRODUCT HTML ----------
+  function renderProductHTML(product) {
+    const imgSrc = product.image_url || product.image || "https://via.placeholder.com/150";
+    const prodLink = product.link || product.product_link || "#";
+    const storeName = cleanStoreName(product.source || 'N/A');
+    const price = product.price || "N/A";
+    const title = product.title || "Untitled Product";
+    return `
+      <div class="product${product.offer ? ' offer' : ''}">
+        <img src="${imgSrc}" alt="${title}" onclick="showOverlay('${imgSrc}', '${title.replace(/'/g,"\\'")}')">
+        <h3>${title}${product.offer ? '<span class="offer-tag">OFFER</span>' : ''}</h3>
+        <p><strong class="price">${price}</strong></p>
+        <p class="store-name">Source: ${storeName}</p>
+        <div class="product-actions">
+          <button class="view-btn" onclick="sendProductLink('${prodLink}')">view</button>
+          <button class="add-btn" onclick='addToCache(${JSON.stringify(product)})'>Add</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function updateProductCountPopup(count) {
+    let popup = document.querySelector("#popupContainer .popupMessage.products");
+    if (!popup) {
+      popup = document.createElement("div");
+      popup.className = "popupMessage products";
+      document.getElementById("popupContainer").appendChild(popup);
+    }
+    popup.textContent = `${count} products`;
+  }
+
+  function updateStoreCountPopup(count) {
+    const storeCount = document.getElementById("storeCount");
+    if (storeCount) {
+      storeCount.textContent = `${count} store${count !== 1 ? 's' : ''}`;
+    }
+  }
+
+  function addPopup(message) {
+    const container = document.getElementById("popupContainer");
+    const div = document.createElement("div");
+    div.className = "popupMessage";
+    div.textContent = message;
+    container.appendChild(div);
+    setTimeout(() => div.remove(), 2000);
+  }
+
+  function clearPopups() {
+    const container = document.getElementById("popupContainer");
+    const storePopup = container.querySelector(".popupMessage.stores");
+    container.innerHTML = "";
+    if (storePopup) container.appendChild(storePopup);
+    document.getElementById("storeCount").textContent = "0 stores";
+    showStoreSpinner(false);
+  }
+
+  /* ----------- INCREMENTAL RENDERING FOR CACHED RESULTS ---------- */
+  function showSavedResults() {
+    const saved = localStorage.getItem("lastSearchResults");
+    const lastQuery = localStorage.getItem("lastSearchQuery");
+    if (saved && lastQuery) {
+      allCachedProducts = JSON.parse(saved);
+      renderedCount = 0;
+
+      globalStoreSet.clear();
+      allCachedProducts.forEach(p => {
+        if (p.source) globalStoreSet.add(cleanStoreName(p.source.trim()));
+      });
+      updateStoreCountPopup(globalStoreSet.size);
+
+      const resultsDiv = document.getElementById("results");
+      resultsDiv.innerHTML = `<div id="products"></div>`;
+      loadNextBatch();
+
+      if (allCachedProducts.length > BATCH_SIZE) {
+        setTimeout(loadRemainingBatches, 300);
+      }
+    }
+  }
+
+  function loadNextBatch() {
+    const productsDiv = document.getElementById("products");
+    const nextBatch = allCachedProducts.slice(renderedCount, renderedCount + BATCH_SIZE);
+    nextBatch.forEach(p => {
+      productsDiv.innerHTML += renderProductHTML(p);
+    });
+    renderedCount += nextBatch.length;
+  }
+
+  function loadRemainingBatches() {
+    if (renderedCount < allCachedProducts.length) {
+      loadNextBatch();
+      requestAnimationFrame(() => {
+        setTimeout(loadRemainingBatches, 50);
+      });
+    }
+  }
+
+  function restoreSearchQuery() {
+    const lastQuery = localStorage.getItem("lastSearchQuery");
+    if (lastQuery) document.getElementById("query").value = lastQuery;
+  }
+
+  // ---------------- IMAGE OVERLAY WITH TITLE ----------------
+  function showOverlay(src, title = "") {
+    document.getElementById("overlayImg").src = src;
+    document.getElementById("overlayTitle").textContent = title;
+    document.getElementById("overlay").style.display = "flex";
+  }
+
+  function hideOverlay(event) {
+    if (event) event.stopPropagation();
+    document.getElementById("overlay").style.display = "none";
+  }
+
+  function parsePrice(priceStr) {
+    const match = (priceStr || "").replace(/[^\d.]/g, "");
+    return parseFloat(match) || 0;
+  }
+
+  /* ---------------- SSE STREAM ---------------- */
+  function startScrape(url, query, resultList, resultsDiv, onComplete) {
+    const source = new EventSource(`${url}?q=${encodeURIComponent(query)}`);
+    source.onmessage = function(event) {
+      console.log("SSE event:", event.data);
+      const item = JSON.parse(event.data);
+
+      // accept anything that looks like a product
+      if (item.title || item.price || item.link || item.product_link) {
+        resultList.push(item);
+        localStorage.setItem("lastSearchResults", JSON.stringify(resultList));
+        updateProductCountPopup(resultList.length);
+
+        if (item.source) {
+          globalStoreSet.add(cleanStoreName(item.source.trim()));
+          updateStoreCountPopup(globalStoreSet.size);
+        }
+
+        if (!document.getElementById("products")) {
+          resultsDiv.innerHTML = `<div id="products"></div>`;
+        }
+        document.getElementById("products").innerHTML += renderProductHTML(item);
+      } else if (item.error) {
+        console.error("Scraper error:", item.error);
+      }
+    };
+    source.onerror = function() {
+      source.close();
+      onComplete();
+    };
+  }
+
+  function showStoreSpinner(isVisible) {
+    const spinner = document.getElementById("storeSpinner");
+    if (spinner) spinner.style.display = isVisible ? "inline-block" : "none";
+  }
+
+  function search() {
+    const query = document.getElementById("query").value.trim();
+    const resultsDiv = document.getElementById("results");
+    if (!query) {
+      resultsDiv.innerHTML = "<p>Please enter a search term.</p>";
+      return;
+    }
+
+    clearPopups();
+    globalStoreSet.clear();
+    resultsDiv.innerHTML = "<p>Loading products...</p>";
+    const resultList = [];
+    localStorage.setItem("lastSearchQuery", query);
+
+    // 🔹 turn spinner ON at start
+    showStoreSpinner(true);
+
+    startScrape("http://127.0.0.1:5000/scrape", query, resultList, resultsDiv, function() {
+      resultsDiv.innerHTML += "<p style='color:green;'>✅ Finished scraping.</p>";
+      // 🔹 turn spinner OFF when done
+      showStoreSpinner(false);
+    });
+  }
+
+  /* ---------------- STORE OVERLAY ---------------- */
+  function showStoreOverlay() {
+    document.getElementById("storeOverlay").style.display = "block";
+    showStoreSpinner(true);
+  }
+
+  function hideStoreOverlay(event) {
+    if (event) event.stopPropagation();
+    document.getElementById("storeOverlay").style.display = "none";
+  }
+
+  /* ---------------- INIT ---------------- */
+  showSavedResults();
+  restoreSearchQuery();
+  </script>
+
+  <script src="/static/js/welcome.js"></script>
+  <script src="/static/js/store.js"></script>
+  <script src="/static/js/incsorter.js"></script>
+
+</body>
+</html>

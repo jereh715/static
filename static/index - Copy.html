@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Search</title>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="preload" href="/static/sans.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+  <style>
+    /* Overlay CSS */
+    #overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      background: rgba(0,0,0,0.8);
+      flex-direction: column; /* stack title above image */
+      z-index: 1000;
+    }
+    #overlayTitle {
+      color: white;
+      font-size: 1.5rem;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 1rem;
+      max-width: 90%;
+      word-wrap: break-word;
+    }
+    #overlayImg {
+      max-width: 90%;
+      max-height: 80%;
+      border-radius: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 🔹 Hamburger Menu -->
+  <div id="hamburger-menu">
+    <button id="menu-btn">☰</button>
+
+    <!-- Side menu panel -->
+    <div id="menu-panel">
+      <a href="/">Browse</a>
+      <a href="/chat">Saved</a>
+      <a href="/offers">Offers</a>
+    </div>
+
+    <!-- Overlay -->
+    <div id="menu-overlay"></div>
+  </div>
+
+  <!-- 🔹 Search Section -->
+  <div class="search-container">
+    <input type="text" id="query" placeholder="Search for a product..." onkeydown="if (event.key === 'Enter') search()">
+    <button onclick="search()">
+      <img src="https://img.icons8.com/?size=100&id=112468&format=png&color=000000" alt="Search">
+    </button>
+  </div>
+
+  <div id="sort-buttons">
+    <button class="sort-btn" onclick="sortProducts('cheap')">→High</button>
+    <button class="sort-btn" onclick="sortProducts('expensive')">→Low</button>
+    <button class="sort-btn" onclick="toggleMaxPriceInput()">Budget</button>
+    <input type="number" id="maxPriceInput" placeholder="Enter max" oninput="sortProducts()">
+    <button class="sort-btn store-sort-btn" onclick="showStoreOverlay()">Store</button>
+  </div>
+
+  <div id="results"></div>
+
+  <!-- 🔹 Image Overlay -->
+  <div id="overlay" onclick="hideOverlay()">
+    <span id="closeBtn" onclick="hideOverlay(event)">×</span>
+    <div id="overlayTitle"></div>
+    <img id="overlayImg" src="" alt="Zoomed Image">
+  </div>
+
+  <!-- 🔹 Popups -->
+  <div id="popupContainer"></div>
+
+  <!-- 🔹 Store Overlay -->
+  <div id="storeOverlay" onclick="hideStoreOverlay(event)">
+    <div class="store-overlay-content">
+      <span id="storeOverlayClose" onclick="hideStoreOverlay(event)">×</span>
+      <h2>Select a Store</h2>
+      <div id="storeGrid"></div>
+    </div>
+  </div>
+
+  <script>
+  /* ---------------- UTILITY: CLEAN STORE NAME ---------------- */
+  function cleanStoreName(name) {
+    if (!name) return "";
+    return name.replace(/^(kutoka\s+)/i, "").trim();
+  }
+
+  /* ---------------- SEND PRODUCT LINK TO BACKEND ---------------- */
+  function sendProductLink(link) {
+    if (!link) return;
+    fetch("http://127.0.0.1:5000/open-link", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: link })
+    })
+    .then(res => {
+      if (res.ok) {
+        addPopup("opening in browser");
+      } else {
+        addPopup("failed to open");
+      }
+    })
+    .catch(() => addPopup("⚠️ Error sending link"));
+  }
+
+  /* ---------------- HAMBURGER MENU ---------------- */
+  (function() {
+    const menuBtn = document.getElementById("menu-btn");
+    const menuPanel = document.getElementById("menu-panel");
+    const menuOverlay = document.getElementById("menu-overlay");
+
+    if (!menuBtn || !menuPanel || !menuOverlay) {
+      console.error("Menu elements not found!");
+      return;
+    }
+
+    menuBtn.addEventListener("click", () => {
+      const isActive = menuPanel.classList.toggle("active");
+      menuOverlay.classList.toggle("active", isActive);
+    });
+
+    menuOverlay.addEventListener("click", () => {
+      menuPanel.classList.remove("active");
+      menuOverlay.classList.remove("active");
+    });
+  })();
+
+  /* ---------------- RANDOM SORT BUTTON COLORS ---------------- */
+  document.addEventListener("DOMContentLoaded", () => {
+    const buttons = document.querySelectorAll("button.sort-btn");
+    const colors = ["sort-blue", "sort-green", "sort-orange"];
+    for (let i = colors.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [colors[i], colors[j]] = [colors[j], colors[i]];
+    }
+    buttons.forEach((btn, index) => btn.classList.add(colors[index % colors.length]));
+  });
+
+  /* ---------------- PRODUCT SEARCH & SORT ---------------- */
+  let currentSortMode = '';
+  const globalStoreSet = new Set();
+
+  let allCachedProducts = [];
+  let renderedCount = 0;
+  const BATCH_SIZE = 5;
+
+  let sortedProducts = [];
+  let sortedRenderedCount = 0;
+
+  // ---------- ADD TO CACHE ----------
+  function addToCache(product) {
+    const key = "savedProducts";
+    const existing = JSON.parse(localStorage.getItem(key) || "[]");
+    if (!existing.some(p => (p.link || p.product_link) === (product.link || product.product_link))) {
+      existing.push(product);
+      localStorage.setItem(key, JSON.stringify(existing));
+    }
+    addPopup("➕ Saved!");
+  }
+
+  // ---------- PRODUCT HTML ----------
+  function renderProductHTML(product) {
+    const imgSrc = product.image_url || product.image;
+    const prodLink = product.link || product.product_link || "#";
+    const storeName = cleanStoreName(product.source || 'N/A'); // ✅ Cleaned
+    return `
+      <div class="product${product.offer ? ' offer' : ''}">
+        <img src="${imgSrc}" alt="${product.title}" onclick="showOverlay('${imgSrc}', '${product.title.replace(/'/g,"\\'")}')">
+        <h3>${product.title}${product.offer ? '<span class="offer-tag">OFFER</span>' : ''}</h3>
+        <p><strong class="price">${product.price}</strong></p>
+        <p class="store-name">Source: ${storeName}</p>
+        <div class="product-actions">
+          <button class="view-btn" onclick="sendProductLink('${prodLink}')">view</button>
+          <button class="add-btn" onclick='addToCache(${JSON.stringify(product)})'>Add</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function updateProductCountPopup(count) {
+    let popup = document.querySelector("#popupContainer .popupMessage.products");
+    if (!popup) {
+      popup = document.createElement("div");
+      popup.className = "popupMessage products";
+      document.getElementById("popupContainer").appendChild(popup);
+    }
+    popup.textContent = `${count} products`;
+  }
+
+  function updateStoreCountPopup(count) {
+    let popup = document.querySelector("#popupContainer .popupMessage.stores");
+    if (!popup) {
+      popup = document.createElement("div");
+      popup.className = "popupMessage stores";
+      document.getElementById("popupContainer").appendChild(popup);
+    }
+    popup.textContent = `${count} store${count !== 1 ? 's' : ''}`;
+  }
+
+  function addPopup(message) {
+    const container = document.getElementById("popupContainer");
+    const div = document.createElement("div");
+    div.className = "popupMessage";
+    div.textContent = message;
+    container.appendChild(div);
+    setTimeout(() => div.remove(), 2000);
+  }
+
+  function clearPopups() {
+    document.getElementById("popupContainer").innerHTML = "";
+  }
+
+  /* ----------- INCREMENTAL RENDERING FOR CACHED RESULTS ---------- */
+  function showSavedResults() {
+    const saved = localStorage.getItem("lastSearchResults");
+    const lastQuery = localStorage.getItem("lastSearchQuery");
+    if (saved && lastQuery) {
+      allCachedProducts = JSON.parse(saved);
+      renderedCount = 0;
+
+      globalStoreSet.clear();
+      allCachedProducts.forEach(p => {
+        if (p.source) globalStoreSet.add(cleanStoreName(p.source.trim())); // ✅ Cleaned
+      });
+      updateStoreCountPopup(globalStoreSet.size);
+
+      const resultsDiv = document.getElementById("results");
+      resultsDiv.innerHTML = `<div id="products"></div>`;
+
+      loadNextBatch();
+
+      if (allCachedProducts.length > BATCH_SIZE) {
+        setTimeout(loadRemainingBatches, 300);
+      }
+    }
+  }
+
+  function loadNextBatch() {
+    const productsDiv = document.getElementById("products");
+    const nextBatch = allCachedProducts.slice(renderedCount, renderedCount + BATCH_SIZE);
+    nextBatch.forEach(p => {
+      productsDiv.innerHTML += renderProductHTML(p);
+    });
+    renderedCount += nextBatch.length;
+  }
+
+  function loadRemainingBatches() {
+    if (renderedCount < allCachedProducts.length) {
+      loadNextBatch();
+      requestAnimationFrame(() => {
+        setTimeout(loadRemainingBatches, 50);
+      });
+    }
+  }
+
+  function restoreSearchQuery() {
+    const lastQuery = localStorage.getItem("lastSearchQuery");
+    if (lastQuery) document.getElementById("query").value = lastQuery;
+  }
+
+  /* ----------- SSE STREAM WITH PROCEDURAL RENDERING ---------- */
+  function startScrape(url, query, resultList, resultsDiv, onComplete) {
+    const source = new EventSource(`${url}?q=${encodeURIComponent(query)}`);
+    let firstMessageReceived = false;
+    let buffer = [];
+    let rendering = false;
+
+    function flushBuffer() {
+      if (buffer.length === 0) return;
+      const productsDiv = document.getElementById("products");
+      buffer.forEach(p => {
+        productsDiv.innerHTML += renderProductHTML(p);
+      });
+      buffer = [];
+      rendering = false;
+    }
+
+    source.onmessage = function(event) {
+      if (!firstMessageReceived) {
+        if (!document.getElementById("products")) {
+          resultsDiv.innerHTML = `<div id="products"></div>`;
+        }
+        firstMessageReceived = true;
+      }
+
+      const item = JSON.parse(event.data);
+      if (item.type === "product") {
+        buffer.push(item);
+        resultList.push(item);
+        localStorage.setItem("lastSearchResults", JSON.stringify(resultList));
+        updateProductCountPopup(resultList.length);
+
+        if (item.source) {
+          globalStoreSet.add(cleanStoreName(item.source.trim())); // ✅ Cleaned
+          updateStoreCountPopup(globalStoreSet.size);
+        }
+
+        if (!rendering) {
+          rendering = true;
+          requestAnimationFrame(() => setTimeout(flushBuffer, 50));
+        }
+      }
+    };
+
+    source.onerror = function() {
+      source.close();
+      onComplete();
+    };
+  }
+
+  function search() {
+    const query = document.getElementById("query").value.trim();
+    const resultsDiv = document.getElementById("results");
+    if (!query) {
+      resultsDiv.innerHTML = "<p>Please enter a search term.</p>";
+      return;
+    }
+
+    clearPopups();
+    globalStoreSet.clear();
+    resultsDiv.innerHTML = "<p>Loading products...</p>";
+    const resultList = [];
+    localStorage.setItem("lastSearchQuery", query);
+
+    startScrape("http://127.0.0.1:5000/scrape", query, resultList, resultsDiv, function() {
+      startScrape("http://127.0.0.1:5001/scrape", query, resultList, resultsDiv, function() {
+        resultsDiv.innerHTML += "<p style='color:green;'>✅ Finished scraping all sources.</p>";
+      });
+    });
+  }
+
+  // ---------------- IMAGE OVERLAY WITH TITLE ----------------
+  function showOverlay(src, title = "") {
+    document.getElementById("overlayImg").src = src;
+    document.getElementById("overlayTitle").textContent = title;
+    document.getElementById("overlay").style.display = "flex";
+  }
+
+  function hideOverlay(event) {
+    if (event) event.stopPropagation();
+    document.getElementById("overlay").style.display = "none";
+  }
+
+  function parsePrice(priceStr) {
+    const match = (priceStr || "").replace(/[^\d.]/g, "");
+    return parseFloat(match) || 0;
+  }
+
+  /* ---------------- INCREMENTAL SORTING ---------------- */
+  function sortProducts(mode) {
+    if (mode) currentSortMode = mode;
+    const saved = localStorage.getItem("lastSearchResults");
+    if (!saved) return;
+
+    const products = JSON.parse(saved);
+    let sorted = products.slice();
+
+    if (currentSortMode === 'cheap') {
+      sorted.sort((a, b) => parsePrice(a.price) - parsePrice(b.price));
+    } else if (currentSortMode === 'expensive') {
+      sorted.sort((a, b) => parsePrice(b.price) - parsePrice(a.price));
+    }
+
+    const maxPrice = parseFloat(document.getElementById("maxPriceInput").value);
+    if (!isNaN(maxPrice)) {
+      sorted = sorted.filter(p => parsePrice(p.price) <= maxPrice);
+    }
+
+    sortedProducts = sorted;
+    sortedRenderedCount = 0;
+
+    const productsDiv = document.getElementById("products");
+    if (productsDiv) productsDiv.innerHTML = "";
+
+    loadNextSortedBatch();
+    if (sortedProducts.length > BATCH_SIZE) {
+      setTimeout(loadRemainingSortedBatches, 100);
+    }
+  }
+
+  function loadNextSortedBatch() {
+    const productsDiv = document.getElementById("products");
+    const nextBatch = sortedProducts.slice(sortedRenderedCount, sortedRenderedCount + BATCH_SIZE);
+    nextBatch.forEach(p => {
+      productsDiv.innerHTML += renderProductHTML(p);
+    });
+    sortedRenderedCount += nextBatch.length;
+  }
+
+  function loadRemainingSortedBatches() {
+    if (sortedRenderedCount < sortedProducts.length) {
+      loadNextSortedBatch();
+      requestAnimationFrame(() => {
+        setTimeout(loadRemainingSortedBatches, 50);
+      });
+    }
+  }
+
+  function toggleMaxPriceInput() {
+    const input = document.getElementById("maxPriceInput");
+    input.style.display = input.style.display === "inline-block" ? "none" : "inline-block";
+  }
+
+  /* ---------------- STORE OVERLAY ---------------- */
+  function showStoreOverlay() {
+    const overlay = document.getElementById("storeOverlay");
+    const grid = document.getElementById("storeGrid");
+    grid.innerHTML = "";
+
+    const saved = localStorage.getItem("lastSearchResults");
+    if (saved) {
+      globalStoreSet.clear();
+      JSON.parse(saved).forEach(p => {
+        if (p.source) globalStoreSet.add(cleanStoreName(p.source.trim()));
+      });
+    }
+
+    const stores = Array.from(globalStoreSet);
+    if (stores.length === 0) {
+      grid.innerHTML = "<p>No stores found yet.</p>";
+    } else {
+      stores.forEach(store => {
+        const div = document.createElement("div");
+        div.className = "store-item";
+        div.textContent = store;
+        div.onclick = () => filterByStore(store);
+        grid.appendChild(div);
+      });
+    }
+
+    overlay.style.display = "flex";
+  }
+
+  function hideStoreOverlay(event) {
+    if (event) event.stopPropagation();
+    document.getElementById("storeOverlay").style.display = "none";
+  }
+
+  function filterByStore(storeName) {
+    const saved = localStorage.getItem("lastSearchResults");
+    if (!saved) return;
+    const products = JSON.parse(saved);
+    const filtered = products.filter(p => cleanStoreName(p.source || "").trim() === storeName.trim());
+
+    sortedProducts = filtered;
+    sortedRenderedCount = 0;
+    const productsDiv = document.getElementById("products");
+    if (productsDiv) productsDiv.innerHTML = "";
+    loadNextSortedBatch();
+    if (sortedProducts.length > BATCH_SIZE) {
+      setTimeout(loadRemainingSortedBatches, 100);
+    }
+
+    hideStoreOverlay();
+  }
+
+  /* ---------------- INIT ---------------- */
+  showSavedResults();
+  restoreSearchQuery();
+
+  // ---------------- INLINE WELCOME HANDLER ----------------
+  document.addEventListener("DOMContentLoaded", () => {
+    const resultsDiv = document.getElementById("results");
+
+    // Inject CSS once
+    if (!document.getElementById("looc-style")) {
+      const style = document.createElement("style");
+      style.id = "looc-style";
+      style.textContent = `
+@font-face {
+  font-family: "MySans";
+  src: url("/static/sans.woff2") format("woff2");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+#welcome-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: transparent;
+  z-index: 9999;
+}
+.card {
+  width: 95%;
+  height: 95%;
+  background: linear-gradient(135deg, #ff0000, #000000);
+  border-radius: 2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  overflow: hidden;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6);
+  padding: 1rem;
+}
+.slider {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+.slider span {
+  position: absolute;
+  font-family: "MySans";
+  font-size: 10vw;
+  font-weight: bold;
+  color: white;
+  opacity: 0;
+  transform: translateX(100%);
+  animation: slide 9s infinite ease-in-out;
+}
+.slider span:nth-child(1) { animation-delay: 0s; }
+.slider span:nth-child(2) { animation-delay: 3s; }
+.slider span:nth-child(3) { animation-delay: 6s; }
+@keyframes slide {
+  0%   { opacity: 0; transform: translateX(100%); }
+  10%  { opacity: 1; transform: translateX(0); }
+  30%  { opacity: 1; transform: translateX(0); }
+  40%  { opacity: 0; transform: translateX(-100%); }
+  100% { opacity: 0; transform: translateX(-100%); }
+}
+.footer {
+  font-family: "MySans";
+  font-size: 1.2vw;
+  font-weight: bold;
+  color: white;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+      `;
+      document.head.appendChild(style);
+    }
+
+    const saved = localStorage.getItem("lastSearchResults");
+    if (!saved || JSON.parse(saved).length === 0) {
+      showWelcome(resultsDiv);
+    }
+  });
+
+function showWelcome(container) {
+  container.innerHTML = `
+    <div id="welcome-overlay">
+      <div class="card">
+        <div class="slider">
+          <span>welcome</span>
+          <span>to</span>
+          <span>looc</span>
+        </div>
+        <div class="footer">search every store easily and save</div>
+        <button onclick="document.getElementById('welcome-overlay').style.display='none'">Close</button>
+      </div>
+    </div>
+  `;
+}
+
+  </script>
+
+</body>
+</html>
