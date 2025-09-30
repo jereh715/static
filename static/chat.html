@@ -348,8 +348,11 @@ async function generateInsights() {
     });
 
     const data = await response.json();
-    const insightText = data.candidates?.[0]?.content?.parts?.[0]?.text || 
-                        "⚠️ Could not generate insights.";
+    let insightText = data.candidates?.[0]?.content?.parts?.[0]?.text || 
+                      "⚠️ Could not generate insights.";
+
+    // Convert *emphasis* into bold
+    insightText = insightText.replace(/\*(.*?)\*/g, "<b>$1</b>");
 
     insightsBox.innerHTML = `
       <div style="
