@@ -4,12 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Saved Products</title>
-<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
 <style>
+  @font-face {
+    font-family: 'CustomSans';
+    src: url('/static_updated/sans.woff2') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+  }
+
   body {
     padding: 0;
     margin: 0;
-    font-family: 'Quicksand', sans-serif;
+    font-family: 'CustomSans', sans-serif;
     background: #fafafa;
   }
 
@@ -38,16 +44,20 @@
     display: inline-block;
     vertical-align: top;
     width: 200px;
+    height: 150px; /* half height */
     margin-right: 12px;
     background: #fff;
     border-radius: 12px;
     padding: 8px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     position: relative;
+    overflow: hidden;
   }
 
   .product img {
     width: 100%;
+    height: 60%;
+    object-fit: cover;
     border-radius: 8px;
   }
 
@@ -69,31 +79,22 @@
   }
   .close-btn:hover { opacity: 1; }
 
-  .product h3 {
-    font-size: 1em;
-    margin: 6px 0;
-  }
-
-  .offer-tag {
-    margin-left: 6px;
-    font-size: 0.75em;
-    color: #FF0000;
-    font-weight: bold;
+  .product p {
+    margin: 4px 0;
+    font-size: 0.9em;
   }
 
   .product-actions {
-    margin-top: 6px;
+    margin-top: 4px;
   }
-  .product-actions .view-btn {
-    padding: 6px 12px;
-    background: #337AFF;
-    color: white;
-    border: none;
-    border-radius: 4px;
+  .product-actions .view-link {
+    color: #337AFF;
+    text-decoration: underline;
     cursor: pointer;
+    font-size: 0.9em;
   }
-  .product-actions .view-btn:hover {
-    background: #0056e0;
+  .product-actions .view-link:hover {
+    color: #0056e0;
   }
 
   /* --------- 2. Insights Section --------- */
@@ -175,9 +176,8 @@
 </head>
 <body>
 
-<!-- Section 1: Added Products -->
+<!-- Section 1: Added Products (no heading now) -->
 <section>
-  <h2>Added Products</h2>
   <div id="products-container"></div>
 </section>
 
@@ -231,11 +231,10 @@ function renderProductHTML(product, index) {
     <div class="product${product.offer ? ' offer' : ''}">
       <button class="close-btn" onclick="removeProduct(${index})">×</button>
       <img src="${imgSrc}" alt="${product.title}">
-      <h3>${product.title}${product.offer ? '<span class="offer-tag">OFFER</span>' : ''}</h3>
       <p><strong class="price">${product.price || ''}</strong></p>
       <p>Source: ${product.source || 'N/A'}</p>
       <div class="product-actions">
-        <button class="view-btn" onclick="sendProductLink('${prodLink}')">View Product</button>
+        <span class="view-link" onclick="sendProductLink('${prodLink}')">View Product</span>
       </div>
     </div>
   `;
