@@ -5,29 +5,213 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Saved Products</title>
 <link rel="stylesheet" href="static_updated/style.css">
+<style>
+  @font-face {
+    font-family: 'CustomSans';
+    src: url('/static_updated/sans.woff2') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+  }
+
+  body {
+    padding: 0;
+    margin: 0;
+    font-family: 'CustomSans', sans-serif;
+    background: #fafafa;
+  }
+
+  section {
+    padding: 2px;
+  }
+
+  h2 {
+    margin: 8px 0 12px;
+    font-weight: 600;
+    color: #333;
+    justify-content: center;
+  }
+
+  #products-container {
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 8px;
+    scroll-behavior: smooth;
+  }
+  #products-container::-webkit-scrollbar {
+    display: none;
+  }
+
+  .product {
+    display: inline-block;
+    vertical-align: top;
+    width: 150px;
+    height: 170px;
+    margin-right: 12px;
+    background: #fff;
+    border-radius: 12px;
+    padding: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .product img {
+    width: 100%;
+    height: 60%;
+    object-fit: cover;
+    border-radius: 8px;
+  }
+
+  .close-btn {
+    position: absolute;
+    top: 6px; right: 6px;
+    width: 20px; height: 20px;
+    background: maroon;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    font-size: 14px;
+    font-weight: bold;
+    line-height: 18px;
+    text-align: center;
+    cursor: pointer;
+    opacity: 0.85;
+    transition: opacity 0.2s;
+  }
+  .close-btn:hover { opacity: 1; }
+
+  .product p {
+    margin: 4px 0;
+    font-size: 0.9em;
+  }
+
+  .product-actions {
+    margin-top: 4px;
+  }
+  .product-actions .view-link {
+    color: #337AFF;
+    text-decoration: underline;
+    cursor: pointer;
+    font-size: 0.9em;
+  }
+  .product-actions .view-link:hover {
+    color: #0056e0;
+  }
+
+  #scroll-indicators {
+    display: flex;
+    justify-content: center;
+    margin-top: 6px;
+  }
+  .scroll-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #ccc;
+    margin: 0 4px;
+    transition: background 0.3s;
+  }
+  .scroll-dot.active {
+    background: #337AFF;
+  }
+
+  #insights-box {
+    background: linear-gradient(135deg, black, blue, red);
+    border-radius: 16px;
+    height: 200px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: left;
+  }
+
+  #history {
+    min-height: 200px;
+    background: transparent;
+    border-radius: 8px;
+  }
+
+  #hamburger-menu {
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    z-index: 3000;
+  }
+
+  #menu-btn {
+    background: white;
+    border: none;
+    font-size: 24px;
+    padding: 8px 12px;
+    border-radius: 25px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    cursor: pointer;
+    position: relative;
+    z-index: 3100;
+  }
+
+  #menu-panel {
+    position: fixed;
+    top: 0;
+    left: -220px;
+    width: 200px;
+    height: 100%;
+    background: #fff;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+    display: flex;
+    flex-direction: column;
+    padding-top: 60px;
+    transition: left 0.3s ease;
+    z-index: 3200;
+  }
+
+  #menu-panel a {
+    padding: 15px;
+    text-decoration: none;
+    color: #333;
+    border-bottom: 1px solid #eee;
+  }
+
+  #menu-panel a:hover {
+    background: #f5f5f5;
+  }
+
+  #menu-panel.active { left: 0; }
+
+  #menu-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.25);
+    display: none;
+    z-index: 3100;
+  }
+
+  #menu-overlay.active { display: block; }
+</style>
 </head>
 <body>
 
-<!-- Section 1: Added Products -->
 <section>
   <h2>Added</h2>
   <div id="products-container"></div>
   <div id="scroll-indicators"></div>
 </section>
 
-<!-- Section 2: Insights -->
 <section>
   <h2>Insights</h2>
   <div id="insights-box"></div>
 </section>
 
-<!-- Section 3: History -->
 <section>
   <h2>History</h2>
   <div id="history"></div>
 </section>
 
-<!-- Hamburger Menu -->
 <div id="hamburger-menu">
   <button id="menu-btn">☰</button>
   <div id="menu-panel">
@@ -39,7 +223,6 @@
 </div>
 
 <script>
-/* ----------- Utility: send link to backend ----------- */
 function sendProductLink(link) {
   if (!link) return;
   fetch("http://127.0.0.1:5000/open-link", {
@@ -57,7 +240,6 @@ function sendProductLink(link) {
   .catch(() => alert("⚠️ Error sending link"));
 }
 
-/* ----------- Saved Products Logic ----------- */
 function renderProductHTML(product, index) {
   const imgSrc = product.image_url || product.image || "";
   const prodLink = product.link || product.product_link || "#";
@@ -86,7 +268,6 @@ function renderSaved() {
   }
   container.innerHTML = saved.map((p, i) => renderProductHTML(p, i)).join("");
 
-  // Create scroll dots
   const dotCount = Math.ceil(container.scrollWidth / container.clientWidth);
   indicators.innerHTML = "";
   for (let i = 0; i < dotCount; i++) {
@@ -108,11 +289,11 @@ function removeProduct(index) {
   saved.splice(index, 1);
   localStorage.setItem("savedProducts", JSON.stringify(saved));
   renderSaved();
+  generateInsights();
 }
 
 renderSaved();
 
-/* ----------- Hamburger Menu Logic ----------- */
 (function() {
   const menuBtn = document.getElementById("menu-btn");
   const menuPanel = document.getElementById("menu-panel");
@@ -133,6 +314,62 @@ renderSaved();
     menuOverlay.classList.remove("active");
   });
 })();
+</script>
+
+<script>
+const GEMINI_API_KEY = "AIzaSyDI_9R2l_sUKcp4nwKMj7SEbVexN47Nr7Q";
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+async function generateInsights() {
+  const saved = JSON.parse(localStorage.getItem("savedProducts") || "[]");
+  const insightsBox = document.getElementById("insights-box");
+
+  if (!saved.length) {
+    insightsBox.innerHTML = "<p style='color:white; padding:12px;'>No products saved yet.</p>";
+    return;
+  }
+
+  try {
+    const productSummary = saved.map(p => 
+      `${p.title || "Unknown"} - ${p.price || "No price"} from ${p.source || "N/A"}`
+    ).join("\n");
+
+    const response = await fetch(GEMINI_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{
+          role: "user",
+          parts: [{
+            text: `Here are some products:\n${productSummary}\n\nGive a short friendly shopping advice or insight about them. Keep it very brief.`
+          }]
+        }]
+      })
+    });
+
+    const data = await response.json();
+    const insightText = data.candidates?.[0]?.content?.parts?.[0]?.text || 
+                        "⚠️ Could not generate insights.";
+
+    insightsBox.innerHTML = `
+      <div style="
+        color: white;
+        padding: 16px;
+        font-size: 1em;
+        line-height: 1.4;
+        overflow-y: auto;
+        height: 100%;
+      ">
+        ${insightText}
+      </div>
+    `;
+  } catch (err) {
+    console.error("Gemini error:", err);
+    insightsBox.innerHTML = "<p style='color:white; padding:12px;'>Error fetching insights.</p>";
+  }
+}
+
+generateInsights();
 </script>
 
 </body>
