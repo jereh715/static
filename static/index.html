@@ -29,7 +29,11 @@
     margin: 8px 0 12px;
     font-weight: 600;
     color: #333;
-    justify-content: center;
+  }
+
+  /* Center only the "Added" title */
+  section:first-of-type h2 {
+    text-align: center;
   }
 
   #products-container {
@@ -93,7 +97,7 @@
   .product-actions .view-link {
     font-family: 'Quicksand', sans-serif;
     color: #337AFF;
-    text-decoration: none; /* removed underline */
+    text-decoration: none;
     cursor: pointer;
     font-size: 0.9em;
     font-weight: 600;
@@ -129,7 +133,7 @@
     align-items: center;
     justify-content: center;
     text-align: left;
-    font-family: 'Quicksand', sans-serif; /* Gemini response font */
+    font-family: 'Quicksand', sans-serif;
   }
 
   #history {
@@ -358,7 +362,6 @@ async function generateInsights() {
     let insightText = data.candidates?.[0]?.content?.parts?.[0]?.text || 
                       "⚠️ Could not generate insights.";
 
-    // Convert *emphasis* into bold
     insightText = insightText.replace(/\*(.*?)\*/g, "<b>$1</b>");
 
     insightsBox.innerHTML = `
