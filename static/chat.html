@@ -19,7 +19,6 @@
     background: #fafafa;
   }
 
-  /* -------- Sections -------- */
   section {
     padding: 2px;
   }
@@ -35,6 +34,7 @@
     overflow-x: auto;
     white-space: nowrap;
     padding-bottom: 8px;
+    scroll-behavior: smooth;
   }
   #products-container::-webkit-scrollbar {
     display: none;
@@ -97,9 +97,27 @@
     color: #0056e0;
   }
 
+  /* ---- Scroll Indicators ---- */
+  #scroll-indicators {
+    display: flex;
+    justify-content: center;
+    margin-top: 6px;
+  }
+  .scroll-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #ccc;
+    margin: 0 4px;
+    transition: background 0.3s;
+  }
+  .scroll-dot.active {
+    background: #337AFF;
+  }
+
   /* --------- 2. Insights Section --------- */
   #insights-box {
-    background: #fff;
+    background: linear-gradient(135deg, black, blue, red);
     border-radius: 16px;
     height: 200px;
     box-shadow: 0 2px 6px rgba(0,0,0,0.1);
@@ -176,9 +194,10 @@
 </head>
 <body>
 
-<!-- Section 1: Added Products (no heading now) -->
+<!-- Section 1: Added Products -->
 <section>
   <div id="products-container"></div>
+  <div id="scroll-indicators"></div>
 </section>
 
 <!-- Section 2: Insights -->
@@ -242,13 +261,31 @@ function renderProductHTML(product, index) {
 
 function renderSaved() {
   const container = document.getElementById("products-container");
+  const indicators = document.getElementById("scroll-indicators");
   const saved = JSON.parse(localStorage.getItem("savedProducts") || "[]");
 
   if (!saved.length) {
     container.innerHTML = "<p>No saved products yet.</p>";
+    indicators.innerHTML = "";
     return;
   }
   container.innerHTML = saved.map((p, i) => renderProductHTML(p, i)).join("");
+
+  // Create scroll dots
+  const dotCount = Math.ceil(container.scrollWidth / container.clientWidth);
+  indicators.innerHTML = "";
+  for (let i = 0; i < dotCount; i++) {
+    const dot = document.createElement("div");
+    dot.classList.add("scroll-dot");
+    if (i === 0) dot.classList.add("active");
+    indicators.appendChild(dot);
+  }
+
+  container.addEventListener("scroll", () => {
+    const index = Math.round(container.scrollLeft / container.clientWidth);
+    const dots = document.querySelectorAll(".scroll-dot");
+    dots.forEach((d, i) => d.classList.toggle("active", i === index));
+  });
 }
 
 function removeProduct(index) {
