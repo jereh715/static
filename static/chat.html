@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Saved Products</title>
 <link rel="stylesheet" href="static_updated/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
 <style>
   @font-face {
     font-family: 'CustomSans';
@@ -28,7 +29,11 @@
     margin: 8px 0 12px;
     font-weight: 600;
     color: #333;
-    justify-content: center;
+  }
+
+  /* Center only the "Added" title */
+  section:first-of-type h2 {
+    text-align: center;
   }
 
   #products-container {
@@ -83,16 +88,19 @@
   .product p {
     margin: 4px 0;
     font-size: 0.9em;
+    font-family: 'CustomSans', sans-serif;
   }
 
   .product-actions {
     margin-top: 4px;
   }
   .product-actions .view-link {
+    font-family: 'Quicksand', sans-serif;
     color: #337AFF;
-    text-decoration: underline;
+    text-decoration: none;
     cursor: pointer;
     font-size: 0.9em;
+    font-weight: 600;
   }
   .product-actions .view-link:hover {
     color: #0056e0;
@@ -125,6 +133,7 @@
     align-items: center;
     justify-content: center;
     text-align: left;
+    font-family: 'Quicksand', sans-serif;
   }
 
   #history {
@@ -150,6 +159,7 @@
     cursor: pointer;
     position: relative;
     z-index: 3100;
+    font-family: 'CustomSans', sans-serif;
   }
 
   #menu-panel {
@@ -165,6 +175,7 @@
     padding-top: 60px;
     transition: left 0.3s ease;
     z-index: 3200;
+    font-family: 'CustomSans', sans-serif;
   }
 
   #menu-panel a {
@@ -351,7 +362,6 @@ async function generateInsights() {
     let insightText = data.candidates?.[0]?.content?.parts?.[0]?.text || 
                       "⚠️ Could not generate insights.";
 
-    // Convert *emphasis* into bold
     insightText = insightText.replace(/\*(.*?)\*/g, "<b>$1</b>");
 
     insightsBox.innerHTML = `
@@ -362,6 +372,7 @@ async function generateInsights() {
         line-height: 1.4;
         overflow-y: auto;
         height: 100%;
+        font-family: 'Quicksand', sans-serif;
       ">
         ${insightText}
       </div>
