@@ -2,22 +2,146 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Show Cached Results</title>
+  <title>Cached Results with Hamburger Menu</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    h1 {
+      margin: 20px;
+    }
+
+    #results {
+      margin: 20px;
+      padding: 0;
+      list-style: none;
+    }
+
+    #results li {
+      padding: 8px;
+      margin-bottom: 6px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background: #fafafa;
+    }
+
+    /* Hamburger menu styles */
+    #hamburger-menu {
+      position: fixed;
+      top: 15px;
+      left: 15px;
+      z-index: 3000;
+    }
+
+    #menu-btn {
+      background: white;
+      border: none;
+      font-size: 24px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      cursor: pointer;
+      position: relative;
+      z-index: 3100; /* above overlay */
+    }
+
+    #menu-panel {
+      position: fixed;
+      top: 0;
+      left: -220px; /* hidden initially */
+      width: 200px;
+      height: 100%;
+      background: #fff;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.2);
+      display: flex;
+      flex-direction: column;
+      padding-top: 60px;
+      transition: left 0.3s ease;
+      z-index: 3200;
+    }
+
+    #menu-panel a {
+      padding: 15px;
+      text-decoration: none;
+      color: #333;
+      border-bottom: 1px solid #eee;
+    }
+
+    #menu-panel a:hover {
+      background: #f5f5f5;
+    }
+
+    #menu-panel.active {
+      left: 0;
+    }
+
+    #menu-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0,0,0,0.25);
+      display: none;
+      z-index: 3100;
+    }
+
+    #menu-overlay.active {
+      display: block;
+    }
+  </style>
 </head>
 <body>
+  <!-- Hamburger Menu -->
+  <div id="hamburger-menu">
+    <button id="menu-btn">☰</button>
+
+    <!-- Side menu panel -->
+    <div id="menu-panel">
+      <a href="/">Browse</a>
+      <a href="/chat">Chat</a>
+      <a href="/offers">Offers</a>
+    </div>
+
+    <!-- Overlay -->
+    <div id="menu-overlay"></div>
+  </div>
+
   <h1>Cached Search Results</h1>
   <ul id="results"></ul>
 
   <script>
-    // Get the saved string
+    // Hamburger menu logic
+    (function() {
+      const menuBtn = document.getElementById("menu-btn");
+      const menuPanel = document.getElementById("menu-panel");
+      const menuOverlay = document.getElementById("menu-overlay");
+
+      if (!menuBtn || !menuPanel || !menuOverlay) {
+        console.error("Menu elements not found!");
+        return;
+      }
+
+      menuBtn.addEventListener("click", () => {
+        const isActive = menuPanel.classList.toggle("active");
+        menuOverlay.classList.toggle("active", isActive);
+      });
+
+      menuOverlay.addEventListener("click", () => {
+        menuPanel.classList.remove("active");
+        menuOverlay.classList.remove("active");
+      });
+    })();
+
+    // Display cached search results
     const saved = localStorage.getItem("lastSearchResults");
 
     if (saved) {
       try {
-        // Parse into JSON
         const results = JSON.parse(saved);
-
-        // Make sure it's an array
         if (Array.isArray(results)) {
           const list = document.getElementById("results");
           results.forEach(item => {
