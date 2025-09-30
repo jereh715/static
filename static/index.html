@@ -1,390 +1,388 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Saved Products</title>
-<link rel="stylesheet" href="static_updated/style.css">
-<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
-<style>
-  @font-face {
-    font-family: 'CustomSans';
-    src: url('/static_updated/sans.woff2') format('woff2');
-    font-weight: normal;
-    font-style: normal;
-  }
-
-  body {
-    padding: 0;
-    margin: 0;
-    font-family: 'CustomSans', sans-serif;
-    background: #fafafa;
-  }
-
-  section {
-    padding: 2px;
-  }
-
-  h2 {
-    margin: 8px 0 12px;
-    font-weight: 600;
-    color: #333;
-  }
-
-  /* Center only the "Added" title */
-  section:first-of-type h2 {
-    text-align: center;
-  }
-
-  #products-container {
-    overflow-x: auto;
-    white-space: nowrap;
-    padding-bottom: 8px;
-    scroll-behavior: smooth;
-  }
-  #products-container::-webkit-scrollbar {
-    display: none;
-  }
-
-  .product {
-    display: inline-block;
-    vertical-align: top;
-    width: 150px;
-    height: 170px;
-    margin-right: 12px;
-    background: #fff;
-    border-radius: 12px;
-    padding: 8px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    position: relative;
-    overflow: hidden;
-  }
-
-  .product img {
-    width: 100%;
-    height: 60%;
-    object-fit: cover;
-    border-radius: 8px;
-  }
-
-  .close-btn {
-    position: absolute;
-    top: 6px; right: 6px;
-    width: 20px; height: 20px;
-    background: maroon;
-    color: #fff;
-    border: none;
-    border-radius: 50%;
-    font-size: 14px;
-    font-weight: bold;
-    line-height: 18px;
-    text-align: center;
-    cursor: pointer;
-    opacity: 0.85;
-    transition: opacity 0.2s;
-  }
-  .close-btn:hover { opacity: 1; }
-
-  .product p {
-    margin: 4px 0;
-    font-size: 0.9em;
-    font-family: 'CustomSans', sans-serif;
-  }
-
-  .product-actions {
-    margin-top: 4px;
-  }
-  .product-actions .view-link {
-    font-family: 'Quicksand', sans-serif;
-    color: #337AFF;
-    text-decoration: none;
-    cursor: pointer;
-    font-size: 0.9em;
-    font-weight: 600;
-  }
-  .product-actions .view-link:hover {
-    color: #0056e0;
-  }
-
-  #scroll-indicators {
-    display: flex;
-    justify-content: center;
-    margin-top: 6px;
-  }
-  .scroll-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: #ccc;
-    margin: 0 4px;
-    transition: background 0.3s;
-  }
-  .scroll-dot.active {
-    background: #337AFF;
-  }
-
-  #insights-box {
-    background: linear-gradient(135deg, black, blue, red);
-    border-radius: 16px;
-    height: 200px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: left;
-    font-family: 'Quicksand', sans-serif;
-  }
-
-  #history {
-    min-height: 200px;
-    background: transparent;
-    border-radius: 8px;
-  }
-
-  #hamburger-menu {
-    position: fixed;
-    top: 15px;
-    left: 15px;
-    z-index: 3000;
-  }
-
-  #menu-btn {
-    background: white;
-    border: none;
-    font-size: 24px;
-    padding: 8px 12px;
-    border-radius: 25px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-    cursor: pointer;
-    position: relative;
-    z-index: 3100;
-    font-family: 'CustomSans', sans-serif;
-  }
-
-  #menu-panel {
-    position: fixed;
-    top: 0;
-    left: -220px;
-    width: 200px;
-    height: 100%;
-    background: #fff;
-    box-shadow: 2px 0 10px rgba(0,0,0,0.2);
-    display: flex;
-    flex-direction: column;
-    padding-top: 60px;
-    transition: left 0.3s ease;
-    z-index: 3200;
-    font-family: 'CustomSans', sans-serif;
-  }
-
-  #menu-panel a {
-    padding: 15px;
-    text-decoration: none;
-    color: #333;
-    border-bottom: 1px solid #eee;
-  }
-
-  #menu-panel a:hover {
-    background: #f5f5f5;
-  }
-
-  #menu-panel.active { left: 0; }
-
-  #menu-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0,0,0,0.25);
-    display: none;
-    z-index: 3100;
-  }
-
-  #menu-overlay.active { display: block; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Search</title>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static_updated/css/style.css">
+  <link rel="preload" href="/static_updated/sans.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+  <style>
+    /* Overlay CSS */
+    #overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      background: rgba(0,0,0,0.8);
+      flex-direction: column;
+      z-index: 1000;
+    }
+    #overlayTitle {
+      color: white;
+      font-size: 1.5rem;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 1rem;
+      max-width: 90%;
+      word-wrap: break-word;
+    }
+    #overlayImg {
+      max-width: 90%;
+      max-height: 80%;
+      border-radius: 1rem;
+    }
+    /* Spinner */
+    #storeSpinner {
+      display: none;
+      width: 10px;
+      height: 10px;
+      border: 3px solid rgba(0,0,0,0.3);
+      border-top: 3px solid red;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
 </head>
 <body>
 
-<section>
-  <h2>Added</h2>
-  <div id="products-container"></div>
-  <div id="scroll-indicators"></div>
-</section>
-
-<section>
-  <h2>Insights</h2>
-  <div id="insights-box"></div>
-</section>
-
-<section>
-  <h2>History</h2>
-  <div id="history"></div>
-</section>
-
-<div id="hamburger-menu">
-  <button id="menu-btn">☰</button>
-  <div id="menu-panel">
-    <a href="/static_updated/index.html">Browse</a>
-    <a href="/chat">Chat</a>
-    <a href="/offers">Offers</a>
-  </div>
-  <div id="menu-overlay"></div>
-</div>
-
-<script>
-function sendProductLink(link) {
-  if (!link) return;
-  fetch("http://127.0.0.1:5000/open-link", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ url: link })
-  })
-  .then(res => {
-    if (res.ok) {
-      alert("✅ Opening in browser...");
-    } else {
-      alert("⚠️ Failed to open link");
-    }
-  })
-  .catch(() => alert("⚠️ Error sending link"));
-}
-
-function renderProductHTML(product, index) {
-  const imgSrc = product.image_url || product.image || "";
-  const prodLink = product.link || product.product_link || "#";
-  return `
-    <div class="product${product.offer ? ' offer' : ''}">
-      <button class="close-btn" onclick="removeProduct(${index})">×</button>
-      <img src="${imgSrc}" alt="${product.title}">
-      <p><strong class="price">${product.price || ''}</strong></p>
-      <p>Source: ${product.source || 'N/A'}</p>
-      <div class="product-actions">
-        <span class="view-link" onclick="sendProductLink('${prodLink}')">View Product</span>
-      </div>
+  <!-- 🔹 Hamburger Menu -->
+  <div id="hamburger-menu">
+    <button id="menu-btn">☰</button>
+    <div id="menu-panel">
+      <a href="/">Browse</a>
+      <a href="/chat">Saved</a>
+      <a href="/offers">Offers</a>
     </div>
-  `;
-}
+    <div id="menu-overlay"></div>
+  </div>
 
-function renderSaved() {
-  const container = document.getElementById("products-container");
-  const indicators = document.getElementById("scroll-indicators");
-  const saved = JSON.parse(localStorage.getItem("savedProducts") || "[]");
+  <!-- 🔹 Search Section -->
+  <div class="search-container">
+    <input type="text" id="query" placeholder="Search for a product..." onkeydown="if (event.key === 'Enter') search()">
+    <button onclick="search()">
+      <img src="https://img.icons8.com/?size=100&id=112468&format=png&color=000000" alt="Search">
+    </button>
+  </div>
 
-  if (!saved.length) {
-    container.innerHTML = "<p>No saved products yet.</p>";
-    indicators.innerHTML = "";
-    return;
-  }
-  container.innerHTML = saved.map((p, i) => renderProductHTML(p, i)).join("");
+  <div id="sort-buttons">
+    <button class="sort-btn" onclick="sortProducts('cheap')">→High</button>
+    <button class="sort-btn" onclick="sortProducts('expensive')">→Low</button>
+    <button class="sort-btn" onclick="toggleMaxPriceInput()">Budget</button>
+    <input type="number" id="maxPriceInput" placeholder="Enter max" oninput="sortProducts()">
+    <button class="sort-btn store-sort-btn" onclick="showStoreOverlay()">Store</button>
+  </div>
 
-  const dotCount = Math.ceil(container.scrollWidth / container.clientWidth);
-  indicators.innerHTML = "";
-  for (let i = 0; i < dotCount; i++) {
-    const dot = document.createElement("div");
-    dot.classList.add("scroll-dot");
-    if (i === 0) dot.classList.add("active");
-    indicators.appendChild(dot);
-  }
+  <div id="results"></div>
 
-  container.addEventListener("scroll", () => {
-    const index = Math.round(container.scrollLeft / container.clientWidth);
-    const dots = document.querySelectorAll(".scroll-dot");
-    dots.forEach((d, i) => d.classList.toggle("active", i === index));
-  });
-}
+  <!-- 🔹 Image Overlay -->
+  <div id="overlay" onclick="hideOverlay()">
+    <span id="closeBtn" onclick="hideOverlay(event)">×</span>
+    <div id="overlayTitle"></div>
+    <img id="overlayImg" src="" alt="Zoomed Image">
+  </div>
 
-function removeProduct(index) {
-  const saved = JSON.parse(localStorage.getItem("savedProducts") || "[]");
-  saved.splice(index, 1);
-  localStorage.setItem("savedProducts", JSON.stringify(saved));
-  renderSaved();
-  generateInsights();
-}
+  <!-- 🔹 Popups -->
+  <div id="popupContainer">
+    <div class="popupMessage stores">
+      <span id="storeCount">0 stores</span>
+      <span id="storeSpinner"></span>
+    </div>
+  </div>
 
-renderSaved();
+  <!-- 🔹 Store Overlay -->
+  <div id="storeOverlay" onclick="hideStoreOverlay(event)">
+    <div class="store-overlay-content">
+      <span id="storeOverlayClose" onclick="hideStoreOverlay(event)">×</span>
+      <h2>Select a Store</h2>
+      <div id="storeGrid"></div>
+    </div>
+  </div>
 
-(function() {
-  const menuBtn = document.getElementById("menu-btn");
-  const menuPanel = document.getElementById("menu-panel");
-  const menuOverlay = document.getElementById("menu-overlay");
-
-  if (!menuBtn || !menuPanel || !menuOverlay) {
-    console.error("Menu elements not found!");
-    return;
-  }
-
-  menuBtn.addEventListener("click", () => {
-    const isActive = menuPanel.classList.toggle("active");
-    menuOverlay.classList.toggle("active", isActive);
-  });
-
-  menuOverlay.addEventListener("click", () => {
-    menuPanel.classList.remove("active");
-    menuOverlay.classList.remove("active");
-  });
-})();
-</script>
-
-<script>
-const GEMINI_API_KEY = "AIzaSyDI_9R2l_sUKcp4nwKMj7SEbVexN47Nr7Q";
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
-
-async function generateInsights() {
-  const saved = JSON.parse(localStorage.getItem("savedProducts") || "[]");
-  const insightsBox = document.getElementById("insights-box");
-
-  if (!saved.length) {
-    insightsBox.innerHTML = "<p style='color:white; padding:12px;'>No products saved yet.</p>";
-    return;
+  <script>
+  /* ---------------- UTILITY: CLEAN STORE NAME ---------------- */
+  function cleanStoreName(name) {
+    if (!name) return "";
+    return name.replace(/^(kutoka\s+)/i, "").trim();
   }
 
-  try {
-    const productSummary = saved.map(p => 
-      `${p.title || "Unknown"} - ${p.price || "No price"} from ${p.source || "N/A"}`
-    ).join("\n");
-
-    const response = await fetch(GEMINI_URL, {
+  /* ---------------- SEND PRODUCT LINK TO BACKEND ---------------- */
+  function sendProductLink(link) {
+    if (!link) return;
+    fetch("http://127.0.0.1:5000/open-link", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{
-          role: "user",
-          parts: [{
-            text: `Here are some products:\n${productSummary}\n\nGive a short friendly shopping advice or insight about them. Keep it very brief.`
-          }]
-        }]
-      })
+      body: JSON.stringify({ url: link })
+    })
+    .then(res => {
+      if (res.ok) {
+        addPopup("opening in browser");
+      } else {
+        addPopup("failed to open");
+      }
+    })
+    .catch(() => addPopup("⚠️ Error sending link"));
+  }
+
+  /* ---------------- HAMBURGER MENU ---------------- */
+  (function() {
+    const menuBtn = document.getElementById("menu-btn");
+    const menuPanel = document.getElementById("menu-panel");
+    const menuOverlay = document.getElementById("menu-overlay");
+
+    if (!menuBtn || !menuPanel || !menuOverlay) {
+      console.error("Menu elements not found!");
+      return;
+    }
+
+    menuBtn.addEventListener("click", () => {
+      const isActive = menuPanel.classList.toggle("active");
+      menuOverlay.classList.toggle("active", isActive);
     });
 
-    const data = await response.json();
-    let insightText = data.candidates?.[0]?.content?.parts?.[0]?.text || 
-                      "⚠️ Could not generate insights.";
+    menuOverlay.addEventListener("click", () => {
+      menuPanel.classList.remove("active");
+      menuOverlay.classList.remove("active");
+    });
+  })();
 
-    insightText = insightText.replace(/\*(.*?)\*/g, "<b>$1</b>");
+  /* ---------------- RANDOM SORT BUTTON COLORS ---------------- */
+  document.addEventListener("DOMContentLoaded", () => {
+    const buttons = document.querySelectorAll("button.sort-btn");
+    const colors = ["sort-blue", "sort-green", "sort-orange"];
+    for (let i = colors.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [colors[i], colors[j]] = [colors[j], colors[i]];
+    }
+    buttons.forEach((btn, index) => btn.classList.add(colors[index % colors.length]));
+  });
 
-    insightsBox.innerHTML = `
-      <div style="
-        color: white;
-        padding: 16px;
-        font-size: 1em;
-        line-height: 1.4;
-        overflow-y: auto;
-        height: 100%;
-        font-family: 'Quicksand', sans-serif;
-      ">
-        ${insightText}
+  /* ---------------- PRODUCT SEARCH & SORT ---------------- */
+  const globalStoreSet = new Set();
+  let allCachedProducts = [];
+  let renderedCount = 0;
+  const BATCH_SIZE = 5;
+
+  // ---------- ADD TO CACHE ----------
+  function addToCache(product) {
+    const key = "savedProducts";
+    const existing = JSON.parse(localStorage.getItem(key) || "[]");
+    if (!existing.some(p => (p.link || p.product_link) === (product.link || product.product_link))) {
+      existing.push(product);
+      localStorage.setItem(key, JSON.stringify(existing));
+    }
+    addPopup("➕ Saved!");
+  }
+
+  // ---------- PRODUCT HTML ----------
+  function renderProductHTML(product) {
+    const imgSrc = product.image_url || product.image || "https://via.placeholder.com/150";
+    const prodLink = product.link || product.product_link || "#";
+    const storeName = cleanStoreName(product.source || 'N/A');
+    const price = product.price || "N/A";
+    const title = product.title || "Untitled Product";
+    return `
+      <div class="product${product.offer ? ' offer' : ''}">
+        <img src="${imgSrc}" alt="${title}" onclick="showOverlay('${imgSrc}', '${title.replace(/'/g,"\\'")}')">
+        <h3>${title}${product.offer ? '<span class="offer-tag">OFFER</span>' : ''}</h3>
+        <p><strong class="price">${price}</strong></p>
+        <p class="store-name">Source: ${storeName}</p>
+        <div class="product-actions">
+          <button class="view-btn" onclick="sendProductLink('${prodLink}')">view</button>
+          <button class="add-btn" onclick='addToCache(${JSON.stringify(product)})'>Add</button>
+        </div>
       </div>
     `;
-  } catch (err) {
-    console.error("Gemini error:", err);
-    insightsBox.innerHTML = "<p style='color:white; padding:12px;'>Error fetching insights.</p>";
   }
-}
 
-generateInsights();
-</script>
+  function updateProductCountPopup(count) {
+    let popup = document.querySelector("#popupContainer .popupMessage.products");
+    if (!popup) {
+      popup = document.createElement("div");
+      popup.className = "popupMessage products";
+      document.getElementById("popupContainer").appendChild(popup);
+    }
+    popup.textContent = `${count} products`;
+  }
+
+  function updateStoreCountPopup(count) {
+    const storeCount = document.getElementById("storeCount");
+    if (storeCount) {
+      storeCount.textContent = `${count} store${count !== 1 ? 's' : ''}`;
+    }
+  }
+
+  function addPopup(message) {
+    const container = document.getElementById("popupContainer");
+    const div = document.createElement("div");
+    div.className = "popupMessage";
+    div.textContent = message;
+    container.appendChild(div);
+    setTimeout(() => div.remove(), 2000);
+  }
+
+  function clearPopups() {
+    const container = document.getElementById("popupContainer");
+    const storePopup = container.querySelector(".popupMessage.stores");
+    container.innerHTML = "";
+    if (storePopup) container.appendChild(storePopup);
+    document.getElementById("storeCount").textContent = "0 stores";
+    showStoreSpinner(false);
+  }
+
+  /* ----------- INCREMENTAL RENDERING FOR CACHED RESULTS ---------- */
+  function showSavedResults() {
+    const saved = localStorage.getItem("lastSearchResults");
+    const lastQuery = localStorage.getItem("lastSearchQuery");
+    if (saved && lastQuery) {
+      allCachedProducts = JSON.parse(saved);
+      renderedCount = 0;
+
+      globalStoreSet.clear();
+      allCachedProducts.forEach(p => {
+        if (p.source) globalStoreSet.add(cleanStoreName(p.source.trim()));
+      });
+      updateStoreCountPopup(globalStoreSet.size);
+
+      const resultsDiv = document.getElementById("results");
+      resultsDiv.innerHTML = `<div id="products"></div>`;
+      loadNextBatch();
+
+      if (allCachedProducts.length > BATCH_SIZE) {
+        setTimeout(loadRemainingBatches, 300);
+      }
+    }
+  }
+
+  function loadNextBatch() {
+    const productsDiv = document.getElementById("products");
+    const nextBatch = allCachedProducts.slice(renderedCount, renderedCount + BATCH_SIZE);
+    nextBatch.forEach(p => {
+      productsDiv.innerHTML += renderProductHTML(p);
+    });
+    renderedCount += nextBatch.length;
+  }
+
+  function loadRemainingBatches() {
+    if (renderedCount < allCachedProducts.length) {
+      loadNextBatch();
+      requestAnimationFrame(() => {
+        setTimeout(loadRemainingBatches, 50);
+      });
+    }
+  }
+
+  function restoreSearchQuery() {
+    const lastQuery = localStorage.getItem("lastSearchQuery");
+    if (lastQuery) document.getElementById("query").value = lastQuery;
+  }
+
+  // ---------------- IMAGE OVERLAY WITH TITLE ----------------
+  function showOverlay(src, title = "") {
+    document.getElementById("overlayImg").src = src;
+    document.getElementById("overlayTitle").textContent = title;
+    document.getElementById("overlay").style.display = "flex";
+  }
+
+  function hideOverlay(event) {
+    if (event) event.stopPropagation();
+    document.getElementById("overlay").style.display = "none";
+  }
+
+  function parsePrice(priceStr) {
+    const match = (priceStr || "").replace(/[^\d.]/g, "");
+    return parseFloat(match) || 0;
+  }
+
+  /* ---------------- SSE STREAM ---------------- */
+  function startScrape(url, query, resultList, resultsDiv, onComplete) {
+    const source = new EventSource(`${url}?q=${encodeURIComponent(query)}`);
+    source.onmessage = function(event) {
+      console.log("SSE event:", event.data);
+      const item = JSON.parse(event.data);
+
+      // accept anything that looks like a product
+      if (item.title || item.price || item.link || item.product_link) {
+        resultList.push(item);
+        localStorage.setItem("lastSearchResults", JSON.stringify(resultList));
+        updateProductCountPopup(resultList.length);
+
+        if (item.source) {
+          globalStoreSet.add(cleanStoreName(item.source.trim()));
+          updateStoreCountPopup(globalStoreSet.size);
+        }
+
+        if (!document.getElementById("products")) {
+          resultsDiv.innerHTML = `<div id="products"></div>`;
+        }
+        document.getElementById("products").innerHTML += renderProductHTML(item);
+      } else if (item.error) {
+        console.error("Scraper error:", item.error);
+      }
+    };
+    source.onerror = function() {
+      source.close();
+      onComplete();
+    };
+  }
+
+  function showStoreSpinner(isVisible) {
+    const spinner = document.getElementById("storeSpinner");
+    if (spinner) spinner.style.display = isVisible ? "inline-block" : "none";
+  }
+
+  function search() {
+    const query = document.getElementById("query").value.trim();
+    const resultsDiv = document.getElementById("results");
+    if (!query) {
+      resultsDiv.innerHTML = "<p>Please enter a search term.</p>";
+      return;
+    }
+
+    clearPopups();
+    globalStoreSet.clear();
+    resultsDiv.innerHTML = "<p>Loading products...</p>";
+    const resultList = [];
+    localStorage.setItem("lastSearchQuery", query);
+
+    // 🔹 turn spinner ON at start
+    showStoreSpinner(true);
+
+    startScrape("http://127.0.0.1:5000/scrape", query, resultList, resultsDiv, function() {
+      resultsDiv.innerHTML += "<p style='color:green;'>✅ Finished scraping.</p>";
+      // 🔹 turn spinner OFF when done
+      showStoreSpinner(false);
+    });
+  }
+
+  /* ---------------- STORE OVERLAY ---------------- */
+  function showStoreOverlay() {
+    document.getElementById("storeOverlay").style.display = "block";
+    showStoreSpinner(true);
+  }
+
+  function hideStoreOverlay(event) {
+    if (event) event.stopPropagation();
+    document.getElementById("storeOverlay").style.display = "none";
+  }
+
+  /* ---------------- INIT ---------------- */
+  showSavedResults();
+  restoreSearchQuery();
+  </script>
+
+  <script src="/static_updated/js/welcome.js"></script>
+  <script src="/static_updated/js/store.js"></script>
+  <script src="/static_updated/js/incsorter.js"></script>
 
 </body>
 </html>
