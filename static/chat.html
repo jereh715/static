@@ -5,26 +5,52 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Saved Products</title>
 <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static_updated/css/style.css">
 <style>
   body {
     padding: 0;
     margin: 0;
     font-family: 'Quicksand', sans-serif;
-    padding-bottom: 60px; /* optional if you had space for bottom nav */
+    background: #fafafa;
   }
 
-  /* product grid */
-  #products {
-    margin-top: 10px;
-    padding: 10px;
+  /* -------- Sections -------- */
+  section {
+    padding: 16px;
   }
 
-  /* close button inside product */
+  h2 {
+    margin: 8px 0 12px;
+    font-weight: 600;
+    color: #333;
+  }
+
+  /* --------- 1. Added Products (horizontal scroll) --------- */
+  #products-container {
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 8px;
+  }
+  #products-container::-webkit-scrollbar {
+    display: none;
+  }
+
   .product {
+    display: inline-block;
+    vertical-align: top;
+    width: 200px;
+    margin-right: 12px;
+    background: #fff;
+    border-radius: 12px;
+    padding: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
     position: relative;
-    margin-bottom: 12px;
   }
+
+  .product img {
+    width: 100%;
+    border-radius: 8px;
+  }
+
   .close-btn {
     position: absolute;
     top: 6px; right: 6px;
@@ -43,7 +69,49 @@
   }
   .close-btn:hover { opacity: 1; }
 
-  /* Hamburger Menu */
+  .product h3 {
+    font-size: 1em;
+    margin: 6px 0;
+  }
+
+  .offer-tag {
+    margin-left: 6px;
+    font-size: 0.75em;
+    color: #FF0000;
+    font-weight: bold;
+  }
+
+  .product-actions {
+    margin-top: 6px;
+  }
+  .product-actions .view-btn {
+    padding: 6px 12px;
+    background: #337AFF;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .product-actions .view-btn:hover {
+    background: #0056e0;
+  }
+
+  /* --------- 2. Insights Section --------- */
+  #insights-box {
+    background: #fff;
+    border-radius: 16px;
+    height: 150px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  }
+
+  /* --------- 3. History Section --------- */
+  #history {
+    min-height: 200px;
+    background: transparent;
+    border-radius: 8px;
+  }
+
+  /* -------- Hamburger Menu -------- */
   #hamburger-menu {
     position: fixed;
     top: 15px;
@@ -60,7 +128,7 @@
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     cursor: pointer;
     position: relative;
-    z-index: 3100; /* above overlay */
+    z-index: 3100;
   }
 
   #menu-panel {
@@ -89,9 +157,7 @@
     background: #f5f5f5;
   }
 
-  #menu-panel.active {
-    left: 0;
-  }
+  #menu-panel.active { left: 0; }
 
   #menu-overlay {
     position: fixed;
@@ -104,50 +170,37 @@
     z-index: 3100;
   }
 
-  #menu-overlay.active {
-    display: block;
-  }
-
-  /* product actions */
-  .product-actions {
-    margin-top: 8px;
-  }
-  .product-actions .view-btn {
-    padding: 6px 12px;
-    background: #337AFF;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  .product-actions .view-btn:hover {
-    background: #0056e0;
-  }
-
-  .offer-tag {
-    margin-left: 6px;
-    font-size: 0.75em;
-    color: #FF0000;
-    font-weight: bold;
-  }
+  #menu-overlay.active { display: block; }
 </style>
 </head>
 <body>
 
-<div id="products"></div>
+<!-- Section 1: Added Products -->
+<section>
+  <h2>Added Products</h2>
+  <div id="products-container"></div>
+</section>
+
+<!-- Section 2: Insights -->
+<section>
+  <h2>Insights</h2>
+  <div id="insights-box"></div>
+</section>
+
+<!-- Section 3: History -->
+<section>
+  <h2>History</h2>
+  <div id="history"></div>
+</section>
 
 <!-- Hamburger Menu -->
 <div id="hamburger-menu">
   <button id="menu-btn">☰</button>
-
-  <!-- Side menu panel -->
   <div id="menu-panel">
     <a href="/">Browse</a>
     <a href="/chat">Chat</a>
     <a href="/offers">Offers</a>
   </div>
-
-  <!-- Overlay -->
   <div id="menu-overlay"></div>
 </div>
 
@@ -177,7 +230,7 @@ function renderProductHTML(product, index) {
   return `
     <div class="product${product.offer ? ' offer' : ''}">
       <button class="close-btn" onclick="removeProduct(${index})">×</button>
-      <img src="${imgSrc}" alt="${product.title}" style="width:100%; border-radius:8px;">
+      <img src="${imgSrc}" alt="${product.title}">
       <h3>${product.title}${product.offer ? '<span class="offer-tag">OFFER</span>' : ''}</h3>
       <p><strong class="price">${product.price || ''}</strong></p>
       <p>Source: ${product.source || 'N/A'}</p>
@@ -189,7 +242,7 @@ function renderProductHTML(product, index) {
 }
 
 function renderSaved() {
-  const container = document.getElementById("products");
+  const container = document.getElementById("products-container");
   const saved = JSON.parse(localStorage.getItem("savedProducts") || "[]");
 
   if (!saved.length) {
