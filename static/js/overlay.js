@@ -16,65 +16,57 @@
     #aiOverlay {
       position: fixed;
       top: 0; left: 0;
-      width: 99%; height: 99%;
-      background: rgba(255,255,255,0.98);
+      width: 99%;
+      height: 99%;
+      background: #fff;
       display: none;
       justify-content: center;
       align-items: center;
       flex-direction: column;
       z-index: 999999;
-      padding: 20px;
+      padding: 10px;
       font-family: 'Quicksand', sans-serif;
-      overflow-y: auto;
     }
     #aiOverlay .ai-overlay-content {
       background: white;
-      border-radius: 20px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
       padding: 20px;
-      max-width: 700px;
-      width: 95%;
-      text-align: center;
+      width: 99%;
+      height: 99%;
+      overflow-y: auto;
       position: relative;
       animation: fadeIn 0.25s ease-in-out;
     }
     #aiOverlay .close-btn {
       position: absolute;
       top: 10px;
-      right: 15px;
+      right: 20px;
       font-size: 28px;
       font-weight: bold;
       cursor: pointer;
       color: #444;
+      z-index: 1000;
+    }
+    #aiOverlay h2 {
+      margin-top: 0;
     }
     #aiOverlay img {
-      max-width: 80%;
+      max-width: 60%;
+      height: auto;
       border-radius: 12px;
-      margin-bottom: 15px;
-    }
-    #aiOverlay button {
-      margin-top: 15px;
-      padding: 10px 18px;
-      border: none;
-      border-radius: 8px;
-      background: #007bff;
-      color: white;
-      cursor: pointer;
-      font-size: 14px;
-    }
-    #aiOverlay button:hover {
-      background: #0056b3;
+      margin: 20px auto;
+      display: block;
     }
     #aiOverlay .similar-list {
-      margin-top: 25px;
-      text-align: left;
+      margin-top: 30px;
     }
     #aiOverlay .similar-item {
       background: #f9f9f9;
       border: 1px solid #ddd;
       border-radius: 6px;
-      padding: 8px 10px;
-      margin-bottom: 8px;
+      padding: 10px;
+      margin-bottom: 10px;
     }
     #aiOverlay .similar-item a {
       text-decoration: none;
@@ -113,13 +105,12 @@
   window.showAiOverlay = function (product) {
     const body = document.getElementById("aiOverlayBody");
 
-    // Base product info
+    // Base product info (without button)
     let html = `
       <h2>${product.title}</h2>
       <img src="${product.img || product.image_url || ""}" alt="${product.title}">
       <p><strong>Price:</strong> ${product.price}</p>
-      <p><strong>${product.source || product.store || ""}</strong></p>
-      <button onclick="window.open('${product.link || product.product_link}', '_blank')">🔗 View in Store</button>
+      <p><strong>Source:</strong> ${product.source || product.store || ""}</p>
     `;
 
     // --- Load all cached products ---
@@ -144,7 +135,7 @@
           priceNum: parsePrice(p.price)
         }))
         .sort((a, b) => b.score - a.score)
-        .slice(0, 30); // top 30 similar by title
+        .slice(0, 30);
 
       const priceSorted = scored.sort(
         (a, b) => Math.abs(a.priceNum - selectedPrice) - Math.abs(b.priceNum - selectedPrice)
