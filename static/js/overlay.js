@@ -32,8 +32,8 @@
       border-radius: 20px;
       box-shadow: 0 4px 20px rgba(0,0,0,0.3);
       padding: 20px;
-      max-width: 600px;
-      width: 90%;
+      max-width: 700px;
+      width: 95%;
       text-align: center;
       position: relative;
       animation: fadeIn 0.25s ease-in-out;
@@ -65,6 +65,24 @@
     #aiOverlay button:hover {
       background: #0056b3;
     }
+    #aiOverlay .similar-list {
+      margin-top: 25px;
+      text-align: left;
+    }
+    #aiOverlay .similar-item {
+      background: #f9f9f9;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 8px 10px;
+      margin-bottom: 8px;
+    }
+    #aiOverlay .similar-item a {
+      text-decoration: none;
+      color: #007bff;
+    }
+    #aiOverlay .similar-item a:hover {
+      text-decoration: underline;
+    }
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
@@ -77,16 +95,63 @@
     overlay.style.display = "none";
   });
 
+  // --- Utility functions (copied from index.html) ---
+  function parsePrice(priceStr) {
+    if (!priceStr) return 0;
+    return Number(priceStr.replace(/[^\d]/g, "")) || 0;
+  }
+  function similarity(a, b) {
+    const tokensA = new Set(a.toLowerCase().split(/\s+/));
+    const tokensB = new Set(b.toLowerCase().split(/\s+/));
+    let common = 0;
+    tokensA.forEach(t => { if (tokensB.has(t)) common++; });
+    return common / Math.max(tokensA.size, tokensB.size);
+  }
+
   // --- Expose function globally ---
-  window.showAiOverlay = function (product) {
+  window.showAiOverlay = function (product, allProducts = []) {
     const body = document.getElementById("aiOverlayBody");
-    body.innerHTML = `
+
+    // Product details
+    let html = `
       <h2>${product.title}</h2>
       <img src="${product.img}" alt="${product.title}">
       <p><strong>Price:</strong> ${product.price}</p>
       <p><strong>${product.store}</strong></p>
-      <button onclick="sendProductLink('${product.link}')">🔗 View in Store</button>
+      <button onclick="window.open('${product.link}', '_blank')">🔗 View in Store</button>
     `;
+
+    // Recommend similar products if list is provided
+    if (allProducts.length > 1) {
+      const selectedPrice = parsePrice(product.price);
+      const scored = allProducts
+        .filter(p => p.title !== product.title)
+        .map(p => ({
+          ...p,
+          score: similarity(product.title, p.title),
+          priceNum: parsePrice(p.price)
+        }))
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 30);
+
+      const priceSorted = scored.sort(
+        (a, b) => Math.abs(a.priceNum - selectedPrice) - Math.abs(b.priceNum - selectedPrice)
+      );
+      const final10 = priceSorted.slice(0, 10);
+
+      html += `<div class="similar-list"><h3>Similar Products</h3>`;
+      final10.forEach(sim => {
+        html += `
+          <div class="similar-item">
+            <a href="${sim.link}" target="_blank">${sim.title}</a><br>
+            <strong>${sim.price}</strong> | ${sim.source}
+          </div>
+        `;
+      });
+      html += `</div>`;
+    }
+
+    body.innerHTML = html;
     overlay.style.display = "flex";
   };
 })();
