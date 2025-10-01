@@ -22,7 +22,7 @@
       justify-content: center;
       align-items: center;
       flex-direction: column;
-      z-index: 999999; /* top-most */
+      z-index: 999999;
       padding: 20px;
       font-family: 'Quicksand', sans-serif;
       overflow-y: auto;
@@ -95,12 +95,13 @@
     overlay.style.display = "none";
   });
 
-  // --- Utility functions (copied from index.html) ---
+  // --- Utility functions ---
   function parsePrice(priceStr) {
     if (!priceStr) return 0;
     return Number(priceStr.replace(/[^\d]/g, "")) || 0;
   }
   function similarity(a, b) {
+    if (!a || !b) return 0;
     const tokensA = new Set(a.toLowerCase().split(/\s+/));
     const tokensB = new Set(b.toLowerCase().split(/\s+/));
     let common = 0;
@@ -109,30 +110,41 @@
   }
 
   // --- Expose function globally ---
-  window.showAiOverlay = function (product, allProducts = []) {
+  window.showAiOverlay = function (product) {
     const body = document.getElementById("aiOverlayBody");
 
-    // Product details
+    // Base product info
     let html = `
       <h2>${product.title}</h2>
-      <img src="${product.img}" alt="${product.title}">
+      <img src="${product.img || product.image_url || ""}" alt="${product.title}">
       <p><strong>Price:</strong> ${product.price}</p>
-      <p><strong>${product.store}</strong></p>
-      <button onclick="window.open('${product.link}', '_blank')">🔗 View in Store</button>
+      <p><strong>${product.source || product.store || ""}</strong></p>
+      <button onclick="window.open('${product.link || product.product_link}', '_blank')">🔗 View in Store</button>
     `;
 
-    // Recommend similar products if list is provided
+    // --- Load all cached products ---
+    let allProducts = [];
+    try {
+      const saved = localStorage.getItem("lastSearchResults");
+      if (saved) {
+        allProducts = JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error("Failed to parse cache", e);
+    }
+
+    // --- Find top 10 similar ---
     if (allProducts.length > 1) {
       const selectedPrice = parsePrice(product.price);
       const scored = allProducts
         .filter(p => p.title !== product.title)
         .map(p => ({
           ...p,
-          score: similarity(product.title, p.title),
+          score: similarity(product.title, p.title || ""),
           priceNum: parsePrice(p.price)
         }))
         .sort((a, b) => b.score - a.score)
-        .slice(0, 30);
+        .slice(0, 30); // top 30 similar by title
 
       const priceSorted = scored.sort(
         (a, b) => Math.abs(a.priceNum - selectedPrice) - Math.abs(b.priceNum - selectedPrice)
@@ -143,8 +155,8 @@
       final10.forEach(sim => {
         html += `
           <div class="similar-item">
-            <a href="${sim.link}" target="_blank">${sim.title}</a><br>
-            <strong>${sim.price}</strong> | ${sim.source}
+            <a href="${sim.link || sim.product_link}" target="_blank">${sim.title}</a><br>
+            <strong>${sim.price}</strong> | ${sim.source || ""}
           </div>
         `;
       });
