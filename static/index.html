@@ -127,7 +127,6 @@
   let renderedCount = 0;
   const BATCH_SIZE = 5;
 
-  // ---------- ADD TO CACHE ----------
   function addToCache(product) {
     const key = "savedProducts";
     const existing = JSON.parse(localStorage.getItem(key) || "[]");
@@ -138,7 +137,6 @@
     addPopup("➕ Saved!");
   }
 
-  // ---------- PRODUCT HTML ----------
   function renderProductHTML(product) {
     const imgSrc = product.image_url || product.image || "https://via.placeholder.com/150";
     const prodLink = product.link || product.product_link || "#";
@@ -194,7 +192,6 @@
     showStoreSpinner(false);
   }
 
-  /* ----------- INCREMENTAL RENDERING FOR CACHED RESULTS ---------- */
   function showSavedResults() {
     const saved = localStorage.getItem("lastSearchResults");
     const lastQuery = localStorage.getItem("lastSearchQuery");
@@ -241,7 +238,6 @@
     if (lastQuery) document.getElementById("query").value = lastQuery;
   }
 
-  // ---------------- IMAGE OVERLAY WITH TITLE ----------------
   function showOverlay(src, title = "") {
     document.getElementById("overlayImg").src = src;
     document.getElementById("overlayTitle").textContent = title;
@@ -258,11 +254,9 @@
     return parseFloat(match) || 0;
   }
 
-  /* ---------------- SSE STREAM ---------------- */
   function startScrape(url, query, resultList, resultsDiv, onComplete) {
     const source = new EventSource(`${url}?q=${encodeURIComponent(query)}`);
     source.onmessage = function(event) {
-      console.log("SSE event:", event.data);
       const item = JSON.parse(event.data);
 
       if (item.title || item.price || item.link || item.product_link) {
@@ -316,7 +310,6 @@
     });
   }
 
-  /* ---------------- STORE OVERLAY ---------------- */
   function showStoreOverlay() {
     document.getElementById("storeOverlay").style.display = "block";
     showStoreSpinner(true);
@@ -331,42 +324,37 @@
   showSavedResults();
   restoreSearchQuery();
 
-  /* ---------------- PRODUCT DETAILS OVERLAY ---------------- */
+  /* ---------------- AI ACTIVATED DOUBLE CLICK / DOUBLE TAP ---------------- */
   let lastTapTime = 0;
 
-  function buildProductOverlay(productCard) {
-    const img = productCard.querySelector("img")?.src || "";
-    const title = productCard.querySelector("h3")?.innerText || "Untitled";
-    const price = productCard.querySelector(".price")?.innerText || "N/A";
-    const store = productCard.querySelector(".store-name")?.innerText || "";
-    return `
-      <div style="text-align:center; padding:20px;">
-        <h2 style="margin-bottom:10px;">${title}</h2>
-        <img src="${img}" alt="${title}" style="max-width:80%; border-radius:12px; margin-bottom:15px;">
-        <p><strong>Price:</strong> ${price}</p>
-        <p><strong>${store}</strong></p>
-      </div>
-    `;
+  function getProductData(productCard) {
+    return {
+      title: productCard.querySelector("h3")?.innerText || "Untitled",
+      img: productCard.querySelector("img")?.src || "",
+      price: productCard.querySelector(".price")?.innerText || "N/A",
+      store: productCard.querySelector(".store-name")?.innerText || "",
+      link: productCard.querySelector(".view-btn")?.getAttribute("onclick")?.match(/'(.*?)'/)?.[1] || "#"
+    };
   }
 
-  // Desktop: double click
   document.addEventListener("dblclick", function (e) {
     const productCard = e.target.closest(".product");
     if (!productCard) return;
     if (e.target.closest("button") || e.target.tagName === "IMG") return;
-    const html = buildProductOverlay(productCard);
-    showAiOverlay(html);
+
+    const productData = getProductData(productCard);
+    showAiOverlay(productData);
   });
 
-  // Mobile: detect double tap
   document.addEventListener("touchend", function (e) {
     const now = Date.now();
     const productCard = e.target.closest(".product");
     if (!productCard) return;
     if (e.target.closest("button") || e.target.tagName === "IMG") return;
+
     if (now - lastTapTime < 300) {
-      const html = buildProductOverlay(productCard);
-      showAiOverlay(html);
+      const productData = getProductData(productCard);
+      showAiOverlay(productData);
     }
     lastTapTime = now;
   });
