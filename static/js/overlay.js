@@ -39,14 +39,14 @@
       animation: fadeIn 0.25s ease-in-out;
     }
     #aiOverlay .close-btn {
-      position: absolute;
-      top: 10px;
+      position: fixed;
+      top: 15px;
       right: 20px;
-      font-size: 28px;
+      font-size: 32px;
       font-weight: bold;
       cursor: pointer;
-      color: #444;
-      z-index: 1000;
+      color: red;
+      z-index: 1000000;
     }
     #aiOverlay h2 {
       margin-top: 0;
@@ -101,11 +101,24 @@
     return common / Math.max(tokensA.size, tokensB.size);
   }
 
+  // --- Get allowed price range ---
+  function getAllowedRange(price) {
+    if (price <= 10000) {
+      return { min: price * 0.5, max: price * 1.5 }; // ±50%
+    } else if (price > 10000 && price <= 40000) {
+      return { min: price * 0.7, max: price * 1.3 }; // ±30%
+    } else if (price > 40000 && price <= 100000) {
+      return { min: price * 0.9, max: price * 1.1 }; // ±10%
+    } else {
+      return { min: 0, max: Infinity }; // No restriction
+    }
+  }
+
   // --- Expose function globally ---
   window.showAiOverlay = function (product) {
     const body = document.getElementById("aiOverlayBody");
 
-    // Base product info (without button)
+    // Base product info
     let html = `
       <h2>${product.title}</h2>
       <img src="${product.img || product.image_url || ""}" alt="${product.title}">
@@ -127,6 +140,8 @@
     // --- Find top 10 similar ---
     if (allProducts.length > 1) {
       const selectedPrice = parsePrice(product.price);
+      const { min, max } = getAllowedRange(selectedPrice);
+
       const scored = allProducts
         .filter(p => p.title !== product.title)
         .map(p => ({
@@ -134,24 +149,27 @@
           score: similarity(product.title, p.title || ""),
           priceNum: parsePrice(p.price)
         }))
+        // keep only those within allowed price range
+        .filter(p => p.priceNum >= min && p.priceNum <= max)
         .sort((a, b) => b.score - a.score)
         .slice(0, 30);
 
-      const priceSorted = scored.sort(
-        (a, b) => Math.abs(a.priceNum - selectedPrice) - Math.abs(b.priceNum - selectedPrice)
-      );
-      const final10 = priceSorted.slice(0, 10);
+      const final10 = scored.slice(0, 10);
 
-      html += `<div class="similar-list"><h3>Similar Products</h3>`;
-      final10.forEach(sim => {
-        html += `
-          <div class="similar-item">
-            <a href="${sim.link || sim.product_link}" target="_blank">${sim.title}</a><br>
-            <strong>${sim.price}</strong> | ${sim.source || ""}
-          </div>
-        `;
-      });
-      html += `</div>`;
+      if (final10.length) {
+        html += `<div class="similar-list"><h3>Similar Products</h3>`;
+        final10.forEach(sim => {
+          html += `
+            <div class="similar-item">
+              <a href="${sim.link || sim.product_link}" target="_blank">${sim.title}</a><br>
+              <strong>${sim.price}</strong> | ${sim.source || ""}
+            </div>
+          `;
+        });
+        html += `</div>`;
+      } else {
+        html += `<p><em>No similar products found in price range.</em></p>`;
+      }
     }
 
     body.innerHTML = html;
