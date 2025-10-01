@@ -265,7 +265,6 @@
       console.log("SSE event:", event.data);
       const item = JSON.parse(event.data);
 
-      // accept anything that looks like a product
       if (item.title || item.price || item.link || item.product_link) {
         resultList.push(item);
         localStorage.setItem("lastSearchResults", JSON.stringify(resultList));
@@ -309,12 +308,10 @@
     const resultList = [];
     localStorage.setItem("lastSearchQuery", query);
 
-    // 🔹 turn spinner ON at start
     showStoreSpinner(true);
 
     startScrape("http://127.0.0.1:5000/scrape", query, resultList, resultsDiv, function() {
       resultsDiv.innerHTML += "<p style='color:green;'>✅ Finished scraping.</p>";
-      // 🔹 turn spinner OFF when done
       showStoreSpinner(false);
     });
   }
@@ -334,22 +331,37 @@
   showSavedResults();
   restoreSearchQuery();
 
-  /* ---------------- AI ACTIVATED CLICK HANDLER ---------------- */
-  document.addEventListener("click", function (e) {
-    const productCard = e.target.closest(".product");
-    if (!productCard) return;
+  /* ---------------- AI ACTIVATED DOUBLE CLICK / DOUBLE TAP ---------------- */
+  let lastTapTime = 0;
 
-    // Ignore clicks on buttons or image
-    if (e.target.closest("button") || e.target.tagName === "IMG") return;
-
-    // Show popup for 3 seconds
+  function showAiPopup() {
     const container = document.getElementById("popupContainer");
     const div = document.createElement("div");
     div.className = "popupMessage";
     div.textContent = "🤖 AI Activated!";
     container.appendChild(div);
-
     setTimeout(() => div.remove(), 3000);
+  }
+
+  // Desktop: double click
+  document.addEventListener("dblclick", function (e) {
+    const productCard = e.target.closest(".product");
+    if (!productCard) return;
+    if (e.target.closest("button") || e.target.tagName === "IMG") return;
+    showAiPopup();
+  });
+
+  // Mobile: detect double tap
+  document.addEventListener("touchend", function (e) {
+    const now = Date.now();
+    const productCard = e.target.closest(".product");
+    if (!productCard) return;
+    if (e.target.closest("button") || e.target.tagName === "IMG") return;
+
+    if (now - lastTapTime < 300) {
+      showAiPopup();
+    }
+    lastTapTime = now;
   });
   </script>
 
