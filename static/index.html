@@ -103,7 +103,7 @@
     #aiOverlay .similar-item {
       flex: 0 0 auto;
       width: 180px;
-      height: 120px; /* 1/4 previous height */
+      height: 120px;
       background: #f9f9f9;
       border: 1px solid #ddd;
       border-radius: 8px;
@@ -113,9 +113,14 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+      cursor: pointer;
 
       /* Snap alignment */
       scroll-snap-align: start;
+      transition: transform 0.2s ease;
+    }
+    #aiOverlay .similar-item:hover {
+      transform: scale(1.05);
     }
     #aiOverlay .similar-item img {
       max-width: 100%;
@@ -123,10 +128,9 @@
       object-fit: contain;
       border-radius: 4px;
       margin: 0 auto 4px;
-      cursor: pointer;
+      pointer-events: none; /* let parent div handle click */
     }
     #aiOverlay .product-link {
-      text-decoration: none;
       color: #007bff;
       font-size: 12px;
       line-height: 1.2em;
@@ -134,11 +138,12 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      cursor: pointer;
+      pointer-events: none; /* clickable through parent */
     }
     #aiOverlay .similar-item div {
       font-size: 11px;
       color: #444;
+      pointer-events: none;
     }
 
     /* Scroll dots */
@@ -252,12 +257,11 @@
       if (scored.length) {
         html += `<div class="similar-list">`;
         scored.forEach(sim => {
+          const link = sim.link || sim.product_link;
           html += `
-            <div class="similar-item">
-              <img src="${sim.img || sim.image_url || ""}" alt="${sim.title}" class="product-link" data-link="${sim.link || sim.product_link}">
-              <span class="product-link" data-link="${sim.link || sim.product_link}">
-                ${sim.title}
-              </span>
+            <div class="similar-item" data-link="${link}">
+              <img src="${sim.img || sim.image_url || ""}" alt="${sim.title}">
+              <span class="product-link">${sim.title}</span>
               <div>${sim.price} | ${sim.source || ""}</div>
             </div>
           `;
@@ -291,10 +295,10 @@
     body.innerHTML = html;
     overlay.style.display = "flex";
 
-    // attach click listeners
-    body.querySelectorAll(".product-link").forEach(el => {
-      el.addEventListener("click", (e) => {
-        const link = e.target.dataset.link;
+    // attach click listeners to whole cards
+    body.querySelectorAll(".similar-item").forEach(el => {
+      el.addEventListener("click", () => {
+        const link = el.dataset.link;
         sendProductLink(link);
       });
     });
