@@ -1,7 +1,4 @@
 (function () {
-  const GEMINI_API_KEY = "AIzaSyDI_9R2l_sUKcp4nwKMj7SEbVexN47Nr7Q";
-  const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
-
   const overlay = document.createElement("div");
   overlay.id = "aiOverlay";
   overlay.innerHTML = `
@@ -50,6 +47,8 @@
       color: red;
       z-index: 1000000;
     }
+
+    /* Main product layout */
     #aiOverlay .main-product {
       display: flex;
       align-items: flex-start;
@@ -73,12 +72,14 @@
       margin: 5px 0;
       font-size: 14px;
     }
+
+    /* Spacer card for insights */
     #aiOverlay .spacer-card {
-      min-height: 80px;
+      min-height: 100px;
       border-radius: 20px;
       background: #f1f1f1;
-      margin: 20px 0 10px 0;
-      padding: 12px;
+      margin: 20px 0 10px 0; /* spacing before similar products */
+      padding: 15px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -87,12 +88,16 @@
       font-style: italic;
       text-align: center;
     }
+
+    /* Horizontal scroll similar products */
     #aiOverlay .similar-list {
       display: flex;
       gap: 12px;
       overflow-x: auto;
-      padding: 10px 0;
+      padding-bottom: 10px;
       margin-bottom: 15px;
+
+      /* Smooth scroll + snap */
       scroll-behavior: smooth;
       scroll-snap-type: x mandatory;
       -webkit-overflow-scrolling: touch;
@@ -111,9 +116,13 @@
       flex-direction: column;
       justify-content: space-between;
       cursor: pointer;
-      scroll-snap-align: center;
-      scroll-snap-stop: always;
-      transition: transform 0.15s ease, box-shadow 0.15s ease, border 0.15s ease;
+      scroll-snap-align: start;
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+    #aiOverlay .similar-item.active {
+      transform: scale(1.08);
+      box-shadow: 0 0 12px 3px rgba(0, 200, 0, 0.35);
+      border-color: #28a745;
     }
     #aiOverlay .similar-item img {
       max-width: 100%;
@@ -138,11 +147,8 @@
       color: #444;
       pointer-events: none;
     }
-    #aiOverlay .similar-item.focused {
-      border: 2px solid #28a745;
-      box-shadow: 0 0 14px rgba(40, 167, 69, 0.55);
-      transform: scale(1.06);
-    }
+
+    /* Scroll dots */
     #aiOverlay .scroll-dots {
       text-align: center;
       margin-top: 8px;
@@ -158,6 +164,7 @@
     #aiOverlay .scroll-dots span.active {
       background: #007bff;
     }
+
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
@@ -169,6 +176,7 @@
     overlay.style.display = "none";
   });
 
+  /* ---------------- HELPERS ---------------- */
   function parsePrice(priceStr) {
     if (!priceStr) return 0;
     return Number(priceStr.replace(/[^\d]/g, "")) || 0;
@@ -188,44 +196,63 @@
     return { min: 0, max: Infinity };
   }
 
-  async function fetchGemini(prompt) {
-    try {
-      const res = await fetch(GEMINI_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }]
-        })
-      });
-      const data = await res.json();
-      return data?.candidates?.[0]?.content?.parts?.[0]?.text || "No insights available.";
-    } catch (err) {
-      console.error("Gemini error:", err);
-      return "⚠️ Failed to fetch insights.";
-    }
+  /* ---------------- POPUP ---------------- */
+  function addPopup(msg) {
+    const pop = document.createElement("div");
+    pop.textContent = msg;
+    Object.assign(pop.style, {
+      position: "fixed", bottom: "20px", right: "20px",
+      background: "#333", color: "#fff", padding: "8px 12px",
+      borderRadius: "8px", fontSize: "13px", zIndex: 9999999
+    });
+    document.body.appendChild(pop);
+    setTimeout(() => pop.remove(), 2500);
   }
 
-  async function updateSpacer(text) {
-    const card = document.querySelector("#aiOverlay .spacer-card");
-    if (card) card.textContent = text;
-  }
-
+  /* ---------------- SEND PRODUCT LINK TO BACKEND ---------------- */
   function sendProductLink(link) {
     if (!link) return;
     fetch("http://127.0.0.1:5000/open-link", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url: link })
-    }).then(res => {
-      if (res.ok) addPopup("opening in browser");
-      else addPopup("failed to open");
-    }).catch(() => addPopup("⚠️ Error sending link"));
+    })
+    .then(res => res.ok ? addPopup("opening in browser") : addPopup("failed to open"))
+    .catch(() => addPopup("⚠️ Error sending link"));
   }
 
+  /* ---------------- GEMINI INSIGHT ---------------- */
+  const GEMINI_API_KEY = "AIzaSyDI_9R2l_sUKcp4nwKMj7SEbVexN47Nr7Q";
+  const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+  async function fetchGeminiInsight(mainProduct, similarProducts) {
+    const prompt = `
+      The main product is: ${mainProduct.title} (Price: ${mainProduct.price}).
+      Similar products: 
+      ${similarProducts.map(p => `${p.title} (Price: ${p.price})`).join("\n")}
+      
+      Please provide a concise comparison/insight of how the main product stands against these similar options (value, uniqueness, etc.).
+    `;
+    try {
+      const res = await fetch(GEMINI_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+      });
+      const data = await res.json();
+      return data?.candidates?.[0]?.content?.parts?.[0]?.text || "No insight generated.";
+    } catch (e) {
+      console.error("Gemini error", e);
+      return "⚠️ Error fetching insight.";
+    }
+  }
+
+  /* ---------------- SHOW OVERLAY ---------------- */
   window.showAiOverlay = async function (product) {
     const body = document.getElementById("aiOverlayBody");
     const dots = document.getElementById("similarDots");
 
+    // --- Base product ---
     let html = `
       <div class="main-product">
         <img src="${product.img || product.image_url || ""}" alt="${product.title}">
@@ -236,8 +263,11 @@
         </div>
       </div>
     `;
-    html += `<div class="spacer-card">Fetching insights...</div>`;
 
+    // --- Spacer card ---
+    html += `<div class="spacer-card" id="spacerCard">Generating insights...</div>`;
+
+    // --- Similar products ---
     let allProducts = [];
     try {
       const saved = localStorage.getItem("lastSearchResults");
@@ -246,11 +276,12 @@
       console.error("Failed to parse cache", e);
     }
 
+    let scored = [];
     if (allProducts.length > 1) {
       const selectedPrice = parsePrice(product.price);
       const { min, max } = getAllowedRange(selectedPrice);
 
-      const scored = allProducts
+      scored = allProducts
         .filter(p => p.title !== product.title)
         .map(p => ({
           ...p,
@@ -266,8 +297,8 @@
         scored.forEach(sim => {
           const link = sim.link || sim.product_link;
           html += `
-            <div class="similar-item" data-link="${link}" data-title="${sim.title}" data-price="${sim.price}" data-source="${sim.source || ""}">
-              <img src="${sim.img || sim.image_url || ""}" alt="${sim.title}" loading="lazy">
+            <div class="similar-item" data-link="${link}">
+              <img loading="lazy" src="${sim.img || sim.image_url || ""}" alt="${sim.title}">
               <span class="product-link">${sim.title}</span>
               <div>${sim.price} | ${sim.source || ""}</div>
             </div>
@@ -275,6 +306,7 @@
         });
         html += `</div>`;
 
+        // dots
         dots.innerHTML = "";
         scored.forEach((_, i) => {
           const dot = document.createElement("span");
@@ -290,51 +322,37 @@
     body.innerHTML = html;
     overlay.style.display = "flex";
 
-    // --- Initial Gemini insights for main product ---
-    fetchGemini(`Give a short 3-sentence customer insight about the product: "${product.title}" priced at ${product.price} from ${product.source || product.store || ""}.`).then(updateSpacer);
-
-    // Attach click listeners
+    // attach click listeners to similar cards
     body.querySelectorAll(".similar-item").forEach(el => {
-      el.addEventListener("click", () => {
-        sendProductLink(el.dataset.link);
-      });
+      el.addEventListener("click", () => sendProductLink(el.dataset.link));
     });
 
-    // Focus tracking & Gemini comparison
+    // scroll haze effect
     const list = body.querySelector(".similar-list");
     if (list) {
-      const items = [...list.querySelectorAll(".similar-item")];
-      function updateFocus() {
-        let center = list.scrollLeft + list.clientWidth / 2;
+      list.addEventListener("scroll", () => {
+        const items = list.querySelectorAll(".similar-item");
         let closest = null;
         let minDist = Infinity;
         items.forEach(item => {
-          let itemCenter = item.offsetLeft + item.offsetWidth / 2;
-          let dist = Math.abs(center - itemCenter);
+          const rect = item.getBoundingClientRect();
+          const dist = Math.abs(rect.left + rect.width / 2 - list.getBoundingClientRect().left - list.clientWidth / 2);
           if (dist < minDist) {
             minDist = dist;
             closest = item;
           }
+          item.classList.remove("active");
         });
-        items.forEach(item => item.classList.remove("focused"));
-        if (closest) {
-          closest.classList.add("focused");
-          fetchGemini(
-            `Compare the main product "${product.title}" (price ${product.price}, source ${product.source || product.store || ""}) with "${closest.dataset.title}" (price ${closest.dataset.price}, source ${closest.dataset.source}). Focus on differences in quality, value, and features in 3 sentences.`
-          ).then(updateSpacer);
-        }
-      }
-      let ticking = false;
-      list.addEventListener("scroll", () => {
-        if (!ticking) {
-          window.requestAnimationFrame(() => {
-            updateFocus();
-            ticking = false;
-          });
-          ticking = true;
-        }
+        if (closest) closest.classList.add("active");
       });
-      updateFocus();
+    }
+
+    // fetch Gemini insight (single call)
+    if (scored.length) {
+      const spacer = document.getElementById("spacerCard");
+      spacer.textContent = "Fetching product insights...";
+      const insight = await fetchGeminiInsight(product, scored);
+      spacer.textContent = insight;
     }
   };
 })();
