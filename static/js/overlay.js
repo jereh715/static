@@ -117,10 +117,15 @@
 
       /* Snap alignment */
       scroll-snap-align: start;
-      transition: transform 0.2s ease;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border 0.2s ease;
     }
     #aiOverlay .similar-item:hover {
       transform: scale(1.05);
+    }
+    #aiOverlay .similar-item.focused {
+      border: 2px solid #28a745;
+      box-shadow: 0 0 12px rgba(40, 167, 69, 0.6);
+      transform: scale(1.08);
     }
     #aiOverlay .similar-item img {
       max-width: 100%;
@@ -128,7 +133,7 @@
       object-fit: contain;
       border-radius: 4px;
       margin: 0 auto 4px;
-      pointer-events: none; /* let parent div handle click */
+      pointer-events: none;
     }
     #aiOverlay .product-link {
       color: #007bff;
@@ -138,7 +143,7 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      pointer-events: none; /* clickable through parent */
+      pointer-events: none;
     }
     #aiOverlay .similar-item div {
       font-size: 11px;
@@ -279,12 +284,28 @@
         // listen to scroll
         setTimeout(() => {
           const list = body.querySelector(".similar-list");
-          list.addEventListener("scroll", () => {
-            const index = Math.round(list.scrollLeft / (list.scrollWidth / scored.length));
-            dots.querySelectorAll("span").forEach((d, i) =>
-              d.classList.toggle("active", i === index)
-            );
-          });
+          const items = [...list.querySelectorAll(".similar-item")];
+
+          function updateFocus() {
+            let center = list.scrollLeft + list.clientWidth / 2;
+            let closest = null;
+            let minDist = Infinity;
+
+            items.forEach(item => {
+              let itemCenter = item.offsetLeft + item.offsetWidth / 2;
+              let dist = Math.abs(center - itemCenter);
+              if (dist < minDist) {
+                minDist = dist;
+                closest = item;
+              }
+            });
+
+            items.forEach(item => item.classList.remove("focused"));
+            if (closest) closest.classList.add("focused");
+          }
+
+          list.addEventListener("scroll", updateFocus);
+          updateFocus(); // initial highlight
         }, 50);
       } else {
         html += `<p><em>No similar products found in range.</em></p>`;
