@@ -1,4 +1,7 @@
 (function () {
+  const GEMINI_API_KEY = "AIzaSyDI_9R2l_sUKcp4nwKMj7SEbVexN47Nr7Q";
+  const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+
   const overlay = document.createElement("div");
   overlay.id = "aiOverlay";
   overlay.innerHTML = `
@@ -47,8 +50,6 @@
       color: red;
       z-index: 1000000;
     }
-
-    /* Main product layout */
     #aiOverlay .main-product {
       display: flex;
       align-items: flex-start;
@@ -72,32 +73,26 @@
       margin: 5px 0;
       font-size: 14px;
     }
-
-    /* Decorative spacer card */
     #aiOverlay .spacer-card {
-      height: 80px;
+      min-height: 80px;
       border-radius: 20px;
       background: #f1f1f1;
-      margin: 20px 0 10px 0; /* space between spacer and similar list */
+      margin: 20px 0 10px 0;
+      padding: 12px;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #aaa;
+      color: #444;
       font-size: 14px;
       font-style: italic;
+      text-align: center;
     }
-
-    /* Horizontal scroll similar products */
     #aiOverlay .similar-list {
       display: flex;
       gap: 12px;
       overflow-x: auto;
-      padding-bottom: 10px;
+      padding: 10px 0;
       margin-bottom: 15px;
-      padding-top: 10px; /* extra space above */
-      padding-bottom: 10px; /* extra space below */
-
-      /* Smooth scroll + snap */
       scroll-behavior: smooth;
       scroll-snap-type: x mandatory;
       -webkit-overflow-scrolling: touch;
@@ -116,8 +111,6 @@
       flex-direction: column;
       justify-content: space-between;
       cursor: pointer;
-
-      /* Snap alignment */
       scroll-snap-align: center;
       scroll-snap-stop: always;
       transition: transform 0.15s ease, box-shadow 0.15s ease, border 0.15s ease;
@@ -145,15 +138,11 @@
       color: #444;
       pointer-events: none;
     }
-
-    /* Focused effect */
     #aiOverlay .similar-item.focused {
       border: 2px solid #28a745;
       box-shadow: 0 0 14px rgba(40, 167, 69, 0.55);
       transform: scale(1.06);
     }
-
-    /* Scroll dots */
     #aiOverlay .scroll-dots {
       text-align: center;
       margin-top: 8px;
@@ -169,7 +158,6 @@
     #aiOverlay .scroll-dots span.active {
       background: #007bff;
     }
-
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
@@ -200,24 +188,41 @@
     return { min: 0, max: Infinity };
   }
 
+  async function fetchGemini(prompt) {
+    try {
+      const res = await fetch(GEMINI_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }]
+        })
+      });
+      const data = await res.json();
+      return data?.candidates?.[0]?.content?.parts?.[0]?.text || "No insights available.";
+    } catch (err) {
+      console.error("Gemini error:", err);
+      return "⚠️ Failed to fetch insights.";
+    }
+  }
+
+  async function updateSpacer(text) {
+    const card = document.querySelector("#aiOverlay .spacer-card");
+    if (card) card.textContent = text;
+  }
+
   function sendProductLink(link) {
     if (!link) return;
     fetch("http://127.0.0.1:5000/open-link", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url: link })
-    })
-    .then(res => {
-      if (res.ok) {
-        addPopup("opening in browser");
-      } else {
-        addPopup("failed to open");
-      }
-    })
-    .catch(() => addPopup("⚠️ Error sending link"));
+    }).then(res => {
+      if (res.ok) addPopup("opening in browser");
+      else addPopup("failed to open");
+    }).catch(() => addPopup("⚠️ Error sending link"));
   }
 
-  window.showAiOverlay = function (product) {
+  window.showAiOverlay = async function (product) {
     const body = document.getElementById("aiOverlayBody");
     const dots = document.getElementById("similarDots");
 
@@ -231,8 +236,7 @@
         </div>
       </div>
     `;
-
-    html += `<div class="spacer-card">Just a spacer card</div>`;
+    html += `<div class="spacer-card">Fetching insights...</div>`;
 
     let allProducts = [];
     try {
@@ -262,7 +266,7 @@
         scored.forEach(sim => {
           const link = sim.link || sim.product_link;
           html += `
-            <div class="similar-item" data-link="${link}">
+            <div class="similar-item" data-link="${link}" data-title="${sim.title}" data-price="${sim.price}" data-source="${sim.source || ""}">
               <img src="${sim.img || sim.image_url || ""}" alt="${sim.title}" loading="lazy">
               <span class="product-link">${sim.title}</span>
               <div>${sim.price} | ${sim.source || ""}</div>
@@ -277,42 +281,6 @@
           if (i === 0) dot.classList.add("active");
           dots.appendChild(dot);
         });
-
-        setTimeout(() => {
-          const list = body.querySelector(".similar-list");
-          const items = [...list.querySelectorAll(".similar-item")];
-
-          function updateFocus() {
-            let center = list.scrollLeft + list.clientWidth / 2;
-            let closest = null;
-            let minDist = Infinity;
-
-            items.forEach(item => {
-              let itemCenter = item.offsetLeft + item.offsetWidth / 2;
-              let dist = Math.abs(center - itemCenter);
-              if (dist < minDist) {
-                minDist = dist;
-                closest = item;
-              }
-            });
-
-            items.forEach(item => item.classList.remove("focused"));
-            if (closest) closest.classList.add("focused");
-          }
-
-          let ticking = false;
-          list.addEventListener("scroll", () => {
-            if (!ticking) {
-              window.requestAnimationFrame(() => {
-                updateFocus();
-                ticking = false;
-              });
-              ticking = true;
-            }
-          });
-
-          updateFocus(); 
-        }, 50);
       } else {
         html += `<p><em>No similar products found in range.</em></p>`;
         dots.innerHTML = "";
@@ -322,11 +290,51 @@
     body.innerHTML = html;
     overlay.style.display = "flex";
 
+    // --- Initial Gemini insights for main product ---
+    fetchGemini(`Give a short 3-sentence customer insight about the product: "${product.title}" priced at ${product.price} from ${product.source || product.store || ""}.`).then(updateSpacer);
+
+    // Attach click listeners
     body.querySelectorAll(".similar-item").forEach(el => {
       el.addEventListener("click", () => {
-        const link = el.dataset.link;
-        sendProductLink(link);
+        sendProductLink(el.dataset.link);
       });
     });
+
+    // Focus tracking & Gemini comparison
+    const list = body.querySelector(".similar-list");
+    if (list) {
+      const items = [...list.querySelectorAll(".similar-item")];
+      function updateFocus() {
+        let center = list.scrollLeft + list.clientWidth / 2;
+        let closest = null;
+        let minDist = Infinity;
+        items.forEach(item => {
+          let itemCenter = item.offsetLeft + item.offsetWidth / 2;
+          let dist = Math.abs(center - itemCenter);
+          if (dist < minDist) {
+            minDist = dist;
+            closest = item;
+          }
+        });
+        items.forEach(item => item.classList.remove("focused"));
+        if (closest) {
+          closest.classList.add("focused");
+          fetchGemini(
+            `Compare the main product "${product.title}" (price ${product.price}, source ${product.source || product.store || ""}) with "${closest.dataset.title}" (price ${closest.dataset.price}, source ${closest.dataset.source}). Focus on differences in quality, value, and features in 3 sentences.`
+          ).then(updateSpacer);
+        }
+      }
+      let ticking = false;
+      list.addEventListener("scroll", () => {
+        if (!ticking) {
+          window.requestAnimationFrame(() => {
+            updateFocus();
+            ticking = false;
+          });
+          ticking = true;
+        }
+      });
+      updateFocus();
+    }
   };
 })();
