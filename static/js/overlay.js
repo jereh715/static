@@ -78,7 +78,7 @@
       height: 80px;
       border-radius: 20px;
       background: #f1f1f1;
-      margin: 20px 0;
+      margin: 20px 0 10px 0; /* space between spacer and similar list */
       display: flex;
       align-items: center;
       justify-content: center;
@@ -94,6 +94,8 @@
       overflow-x: auto;
       padding-bottom: 10px;
       margin-bottom: 15px;
+      padding-top: 10px; /* extra space above */
+      padding-bottom: 10px; /* extra space below */
 
       /* Smooth scroll + snap */
       scroll-behavior: smooth;
@@ -116,16 +118,9 @@
       cursor: pointer;
 
       /* Snap alignment */
-      scroll-snap-align: start;
-      transition: transform 0.2s ease, box-shadow 0.2s ease, border 0.2s ease;
-    }
-    #aiOverlay .similar-item:hover {
-      transform: scale(1.05);
-    }
-    #aiOverlay .similar-item.focused {
-      border: 2px solid #28a745;
-      box-shadow: 0 0 12px rgba(40, 167, 69, 0.6);
-      transform: scale(1.08);
+      scroll-snap-align: center;
+      scroll-snap-stop: always;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, border 0.15s ease;
     }
     #aiOverlay .similar-item img {
       max-width: 100%;
@@ -149,6 +144,13 @@
       font-size: 11px;
       color: #444;
       pointer-events: none;
+    }
+
+    /* Focused effect */
+    #aiOverlay .similar-item.focused {
+      border: 2px solid #28a745;
+      box-shadow: 0 0 14px rgba(40, 167, 69, 0.55);
+      transform: scale(1.06);
     }
 
     /* Scroll dots */
@@ -198,7 +200,6 @@
     return { min: 0, max: Infinity };
   }
 
-  /* ---------------- SEND PRODUCT LINK TO BACKEND ---------------- */
   function sendProductLink(link) {
     if (!link) return;
     fetch("http://127.0.0.1:5000/open-link", {
@@ -220,7 +221,6 @@
     const body = document.getElementById("aiOverlayBody");
     const dots = document.getElementById("similarDots");
 
-    // --- Base product ---
     let html = `
       <div class="main-product">
         <img src="${product.img || product.image_url || ""}" alt="${product.title}">
@@ -232,10 +232,8 @@
       </div>
     `;
 
-    // --- Spacer card ---
     html += `<div class="spacer-card">Just a spacer card</div>`;
 
-    // --- Similar products ---
     let allProducts = [];
     try {
       const saved = localStorage.getItem("lastSearchResults");
@@ -265,7 +263,7 @@
           const link = sim.link || sim.product_link;
           html += `
             <div class="similar-item" data-link="${link}">
-              <img src="${sim.img || sim.image_url || ""}" alt="${sim.title}">
+              <img src="${sim.img || sim.image_url || ""}" alt="${sim.title}" loading="lazy">
               <span class="product-link">${sim.title}</span>
               <div>${sim.price} | ${sim.source || ""}</div>
             </div>
@@ -273,7 +271,6 @@
         });
         html += `</div>`;
 
-        // dots
         dots.innerHTML = "";
         scored.forEach((_, i) => {
           const dot = document.createElement("span");
@@ -281,7 +278,6 @@
           dots.appendChild(dot);
         });
 
-        // listen to scroll
         setTimeout(() => {
           const list = body.querySelector(".similar-list");
           const items = [...list.querySelectorAll(".similar-item")];
@@ -304,8 +300,18 @@
             if (closest) closest.classList.add("focused");
           }
 
-          list.addEventListener("scroll", updateFocus);
-          updateFocus(); // initial highlight
+          let ticking = false;
+          list.addEventListener("scroll", () => {
+            if (!ticking) {
+              window.requestAnimationFrame(() => {
+                updateFocus();
+                ticking = false;
+              });
+              ticking = true;
+            }
+          });
+
+          updateFocus(); 
         }, 50);
       } else {
         html += `<p><em>No similar products found in range.</em></p>`;
@@ -316,7 +322,6 @@
     body.innerHTML = html;
     overlay.style.display = "flex";
 
-    // attach click listeners to whole cards
     body.querySelectorAll(".similar-item").forEach(el => {
       el.addEventListener("click", () => {
         const link = el.dataset.link;
