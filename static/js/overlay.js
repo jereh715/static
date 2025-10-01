@@ -1,93 +1,92 @@
-// overlay.js
-
 (function () {
+  // --- Inject overlay HTML once ---
+  const overlay = document.createElement("div");
+  overlay.id = "aiOverlay";
+  overlay.innerHTML = `
+    <div class="ai-overlay-content">
+      <span class="close-btn" id="aiOverlayClose">×</span>
+      <div id="aiOverlayBody"></div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
   // --- Inject CSS ---
   const style = document.createElement("style");
   style.textContent = `
-    /* AI Overlay Fullscreen */
-    .ai-overlay {
+    #aiOverlay {
       position: fixed;
-      top: 0;
-      left: 0;
-      width: 99%;
-      height: 99%;
-      background: rgba(0, 0, 0, 0.75);
-      display: flex;
+      top: 0; left: 0;
+      width: 99%; height: 99%;
+      background: rgba(255,255,255,0.98);
+      display: none;
       justify-content: center;
       align-items: center;
-      z-index: 99999; /* top-most overlay */
-      transition: opacity 0.3s ease;
-    }
-
-    .ai-overlay.hidden {
-      display: none;
-    }
-
-    .ai-overlay-card {
-      background: #fff;
-      width: 99%;
-      height: 99%;
-      border-radius: 12px;
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
-      position: relative;
-      overflow: auto;
+      flex-direction: column;
+      z-index: 999999; /* top-most */
       padding: 20px;
+      font-family: 'Quicksand', sans-serif;
+      overflow-y: auto;
     }
-
-    .ai-overlay-close {
+    #aiOverlay .ai-overlay-content {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+      padding: 20px;
+      max-width: 600px;
+      width: 90%;
+      text-align: center;
+      position: relative;
+      animation: fadeIn 0.25s ease-in-out;
+    }
+    #aiOverlay .close-btn {
       position: absolute;
-      top: 12px;
-      right: 20px;
+      top: 10px;
+      right: 15px;
       font-size: 28px;
-      border: none;
-      background: transparent;
-      cursor: pointer;
-      color: #333;
       font-weight: bold;
+      cursor: pointer;
+      color: #444;
     }
-
-    .ai-overlay-close:hover {
-      color: red;
+    #aiOverlay img {
+      max-width: 80%;
+      border-radius: 12px;
+      margin-bottom: 15px;
     }
-
-    .ai-overlay-content {
-      margin-top: 40px;
-      font-family: "Quicksand", sans-serif;
-      font-size: 18px;
-      color: #222;
+    #aiOverlay button {
+      margin-top: 15px;
+      padding: 10px 18px;
+      border: none;
+      border-radius: 8px;
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    #aiOverlay button:hover {
+      background: #0056b3;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
   `;
   document.head.appendChild(style);
 
-  // --- Create overlay container ---
-  const overlay = document.createElement("div");
-  overlay.id = "aiOverlay";
-  overlay.className = "ai-overlay hidden";
-
-  // Overlay inner card
-  overlay.innerHTML = `
-    <div class="ai-overlay-card">
-      <button class="ai-overlay-close" id="aiOverlayClose">×</button>
-      <div class="ai-overlay-content" id="aiOverlayContent">
-        <!-- Dynamic content goes here -->
-      </div>
-    </div>
-  `;
-
-  document.body.appendChild(overlay);
-
-  // Close button listener
-  document.getElementById("aiOverlayClose").addEventListener("click", () => {
-    hideAiOverlay();
+  // --- Close handler ---
+  overlay.querySelector("#aiOverlayClose").addEventListener("click", () => {
+    overlay.style.display = "none";
   });
 
-  // --- Exposed functions ---
-  window.showAiOverlay = function (contentHtml = "<p>🤖 AI Overlay Activated!</p>") {
-    document.getElementById("aiOverlayContent").innerHTML = contentHtml;
-    overlay.classList.remove("hidden");
-  };
-
-  window.hideAiOverlay = function () {
-    overlay.classList.add("hidden");
+  // --- Expose function globally ---
+  window.showAiOverlay = function (product) {
+    const body = document.getElementById("aiOverlayBody");
+    body.innerHTML = `
+      <h2>${product.title}</h2>
+      <img src="${product.img}" alt="${product.title}">
+      <p><strong>Price:</strong> ${product.price}</p>
+      <p><strong>${product.store}</strong></p>
+      <button onclick="sendProductLink('${product.link}')">🔗 View in Store</button>
+    `;
+    overlay.style.display = "flex";
   };
 })();
