@@ -94,6 +94,11 @@
       overflow-x: auto;
       padding-bottom: 10px;
       margin-bottom: 15px;
+
+      /* Smooth scroll + snap */
+      scroll-behavior: smooth;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
     }
     #aiOverlay .similar-item {
       flex: 0 0 auto;
@@ -108,6 +113,9 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+
+      /* Snap alignment */
+      scroll-snap-align: start;
     }
     #aiOverlay .similar-item img {
       max-width: 100%;
