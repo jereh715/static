@@ -1,196 +1,73 @@
-(function () {
-  const overlay = document.createElement("div");
-  overlay.id = "aiOverlay";
-  overlay.innerHTML = `
-    <div class="ai-overlay-content">
-      <span class="close-btn" id="aiOverlayClose">×</span>
-      <div id="aiOverlayBody"></div>
-      <div class="scroll-dots" id="similarDots"></div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Search</title>
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static_updated/css/style.css">
+  <link rel="preload" href="/static_updated/sans.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+</head>
+<body>
+
+  <!-- 🔹 Hamburger Menu -->
+  <div id="hamburger-menu">
+    <button id="menu-btn">☰</button>
+    <div id="menu-panel">
+      <a href="/">Browse</a>
+      <a href="/chat">Saved</a>
+      <a href="/offers">Offers</a>
     </div>
-  `;
-  document.body.appendChild(overlay);
+    <div id="menu-overlay"></div>
+  </div>
 
-  const style = document.createElement("style");
-  style.textContent = `
-    #aiOverlay {
-      position: fixed;
-      top: 0; left: 0;
-      width: 99%;
-      height: 99%;
-      background: #fff;
-      display: none;
-      justify-content: center;
-      align-items: center;
-      flex-direction: column;
-      z-index: 999999;
-      padding: 10px;
-      font-family: 'Quicksand', sans-serif;
-    }
-    #aiOverlay .ai-overlay-content {
-      background: white;
-      border-radius: 12px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-      padding: 20px;
-      width: 99%;
-      height: 99%;
-      overflow-y: auto;
-      position: relative;
-      animation: fadeIn 0.25s ease-in-out;
-    }
-    #aiOverlay .close-btn {
-      position: fixed;
-      top: 15px;
-      right: 20px;
-      font-size: 32px;
-      font-weight: bold;
-      cursor: pointer;
-      color: red;
-      z-index: 1000000;
-    }
+  <!-- 🔹 Search Section -->
+  <div class="search-container">
+    <input type="text" id="query" placeholder="Search for a product..." onkeydown="if (event.key === 'Enter') search()">
+    <button onclick="search()">
+      <img src="https://img.icons8.com/?size=100&id=112468&format=png&color=000000" alt="Search">
+    </button>
+  </div>
 
-    /* Main product layout */
-    #aiOverlay .main-product {
-      display: flex;
-      align-items: flex-start;
-      gap: 15px;
-      margin-bottom: 20px;
-    }
-    #aiOverlay .main-product img {
-      width: 160px;
-      height: auto;
-      border-radius: 10px;
-      flex-shrink: 0;
-    }
-    #aiOverlay .main-details {
-      flex-grow: 1;
-    }
-    #aiOverlay .main-details h2 {
-      font-size: 18px;
-      margin: 0 0 10px;
-    }
-    #aiOverlay .main-details p {
-      margin: 5px 0;
-      font-size: 14px;
-    }
+  <div id="sort-buttons">
+    <button class="sort-btn" onclick="sortProducts('cheap')">→High</button>
+    <button class="sort-btn" onclick="sortProducts('expensive')">→Low</button>
+    <button class="sort-btn" onclick="toggleMaxPriceInput()">Budget</button>
+    <input type="number" id="maxPriceInput" placeholder="Enter max" oninput="sortProducts()">
+    <button class="sort-btn store-sort-btn" onclick="showStoreOverlay()">Store</button>
+  </div>
 
-    /* Decorative spacer card */
-    #aiOverlay .spacer-card {
-      height: 80px;
-      border-radius: 20px;
-      background: #f1f1f1;
-      margin: 20px 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #aaa;
-      font-size: 14px;
-      font-style: italic;
-    }
+  <div id="results"></div>
 
-    /* Horizontal scroll similar products */
-    #aiOverlay .similar-list {
-      display: flex;
-      gap: 12px;
-      overflow-x: auto;
-      padding-bottom: 10px;
-      margin-bottom: 15px;
+  <!-- 🔹 Image Overlay -->
+  <div id="overlay" onclick="hideOverlay()">
+    <span id="closeBtn" onclick="hideOverlay(event)">×</span>
+    <div id="overlayTitle"></div>
+    <img id="overlayImg" src="" alt="Zoomed Image">
+  </div>
 
-      /* Smooth scroll + snap */
-      scroll-behavior: smooth;
-      scroll-snap-type: x mandatory;
-      -webkit-overflow-scrolling: touch;
-    }
-    #aiOverlay .similar-item {
-      flex: 0 0 auto;
-      width: 180px;
-      height: 120px;
-      background: #f9f9f9;
-      border: 1px solid #ddd;
-      border-radius: 8px;
-      padding: 6px;
-      text-align: center;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      cursor: pointer;
+  <!-- 🔹 Popups -->
+  <div id="popupContainer">
+    <div class="popupMessage stores">
+      <span id="storeCount">0 stores</span>
+      <span id="storeSpinner"></span>
+    </div>
+  </div>
 
-      /* Snap alignment */
-      scroll-snap-align: start;
-      transition: transform 0.2s ease;
-    }
-    #aiOverlay .similar-item:hover {
-      transform: scale(1.05);
-    }
-    #aiOverlay .similar-item img {
-      max-width: 100%;
-      max-height: 60px;
-      object-fit: contain;
-      border-radius: 4px;
-      margin: 0 auto 4px;
-      pointer-events: none; /* let parent div handle click */
-    }
-    #aiOverlay .product-link {
-      color: #007bff;
-      font-size: 12px;
-      line-height: 1.2em;
-      font-weight: bold;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      pointer-events: none; /* clickable through parent */
-    }
-    #aiOverlay .similar-item div {
-      font-size: 11px;
-      color: #444;
-      pointer-events: none;
-    }
+  <!-- 🔹 Store Overlay -->
+  <div id="storeOverlay" onclick="hideStoreOverlay(event)">
+    <div class="store-overlay-content">
+      <span id="storeOverlayClose" onclick="hideStoreOverlay(event)">×</span>
+      <h2>Select a Store</h2>
+      <div id="storeGrid"></div>
+    </div>
+  </div>
 
-    /* Scroll dots */
-    #aiOverlay .scroll-dots {
-      text-align: center;
-      margin-top: 8px;
-    }
-    #aiOverlay .scroll-dots span {
-      display: inline-block;
-      width: 8px;
-      height: 8px;
-      margin: 0 3px;
-      background: #ccc;
-      border-radius: 50%;
-    }
-    #aiOverlay .scroll-dots span.active {
-      background: #007bff;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-  `;
-  document.head.appendChild(style);
-
-  overlay.querySelector("#aiOverlayClose").addEventListener("click", () => {
-    overlay.style.display = "none";
-  });
-
-  function parsePrice(priceStr) {
-    if (!priceStr) return 0;
-    return Number(priceStr.replace(/[^\d]/g, "")) || 0;
-  }
-  function similarity(a, b) {
-    if (!a || !b) return 0;
-    const tokensA = new Set(a.toLowerCase().split(/\s+/));
-    const tokensB = new Set(b.toLowerCase().split(/\s+/));
-    let common = 0;
-    tokensA.forEach(t => { if (tokensB.has(t)) common++; });
-    return common / Math.max(tokensA.size, tokensB.size);
-  }
-  function getAllowedRange(price) {
-    if (price <= 10000) return { min: price * 0.5, max: price * 1.5 };
-    if (price > 10000 && price <= 40000) return { min: price * 0.7, max: price * 1.3 };
-    if (price > 40000 && price <= 100000) return { min: price * 0.9, max: price * 1.1 };
-    return { min: 0, max: Infinity };
+  <script>
+  /* ---------------- UTILITY: CLEAN STORE NAME ---------------- */
+  function cleanStoreName(name) {
+    if (!name) return "";
+    return name.replace(/^(kutoka\s+)/i, "").trim();
   }
 
   /* ---------------- SEND PRODUCT LINK TO BACKEND ---------------- */
@@ -211,96 +88,294 @@
     .catch(() => addPopup("⚠️ Error sending link"));
   }
 
-  window.showAiOverlay = function (product) {
-    const body = document.getElementById("aiOverlayBody");
-    const dots = document.getElementById("similarDots");
+  /* ---------------- HAMBURGER MENU ---------------- */
+  (function() {
+    const menuBtn = document.getElementById("menu-btn");
+    const menuPanel = document.getElementById("menu-panel");
+    const menuOverlay = document.getElementById("menu-overlay");
 
-    // --- Base product ---
-    let html = `
-      <div class="main-product">
-        <img src="${product.img || product.image_url || ""}" alt="${product.title}">
-        <div class="main-details">
-          <h2>${product.title}</h2>
-          <p><strong>Price:</strong> ${product.price}</p>
-          <p><strong>Source:</strong> ${product.source || product.store || ""}</p>
+    if (!menuBtn || !menuPanel || !menuOverlay) {
+      console.error("Menu elements not found!");
+      return;
+    }
+
+    menuBtn.addEventListener("click", () => {
+      const isActive = menuPanel.classList.toggle("active");
+      menuOverlay.classList.toggle("active", isActive);
+    });
+
+    menuOverlay.addEventListener("click", () => {
+      menuPanel.classList.remove("active");
+      menuOverlay.classList.remove("active");
+    });
+  })();
+
+  /* ---------------- RANDOM SORT BUTTON COLORS ---------------- */
+  document.addEventListener("DOMContentLoaded", () => {
+    const buttons = document.querySelectorAll("button.sort-btn");
+    const colors = ["sort-blue", "sort-green", "sort-orange"];
+    for (let i = colors.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [colors[i], colors[j]] = [colors[j], colors[i]];
+    }
+    buttons.forEach((btn, index) => btn.classList.add(colors[index % colors.length]));
+  });
+
+  /* ---------------- PRODUCT SEARCH & SORT ---------------- */
+  const globalStoreSet = new Set();
+  let allCachedProducts = [];
+  let renderedCount = 0;
+  const BATCH_SIZE = 5;
+
+  // ---------- ADD TO CACHE ----------
+  function addToCache(product) {
+    const key = "savedProducts";
+    const existing = JSON.parse(localStorage.getItem(key) || "[]");
+    if (!existing.some(p => (p.link || p.product_link) === (product.link || product.product_link))) {
+      existing.push(product);
+      localStorage.setItem(key, JSON.stringify(existing));
+    }
+    addPopup("➕ Saved!");
+  }
+
+  // ---------- PRODUCT HTML ----------
+  function renderProductHTML(product) {
+    const imgSrc = product.image_url || product.image || "https://via.placeholder.com/150";
+    const prodLink = product.link || product.product_link || "#";
+    const storeName = cleanStoreName(product.source || 'N/A');
+    const price = product.price || "N/A";
+    const title = product.title || "Untitled Product";
+    return `
+      <div class="product${product.offer ? ' offer' : ''}">
+        <img src="${imgSrc}" alt="${title}" onclick="showOverlay('${imgSrc}', '${title.replace(/'/g,"\\'")}')">
+        <h3>${title}${product.offer ? '<span class="offer-tag">OFFER</span>' : ''}</h3>
+        <p><strong class="price">${price}</strong></p>
+        <p class="store-name">Source: ${storeName}</p>
+        <div class="product-actions">
+          <button class="view-btn" onclick="sendProductLink('${prodLink}')">view</button>
+          <button class="add-btn" onclick='addToCache(${JSON.stringify(product)})'>Add</button>
         </div>
       </div>
     `;
+  }
 
-    // --- Spacer card ---
-    html += `<div class="spacer-card">Just a spacer card</div>`;
-
-    // --- Similar products ---
-    let allProducts = [];
-    try {
-      const saved = localStorage.getItem("lastSearchResults");
-      if (saved) allProducts = JSON.parse(saved);
-    } catch (e) {
-      console.error("Failed to parse cache", e);
+  function updateProductCountPopup(count) {
+    let popup = document.querySelector("#popupContainer .popupMessage.products");
+    if (!popup) {
+      popup = document.createElement("div");
+      popup.className = "popupMessage products";
+      document.getElementById("popupContainer").appendChild(popup);
     }
+    popup.textContent = `${count} products`;
+  }
 
-    if (allProducts.length > 1) {
-      const selectedPrice = parsePrice(product.price);
-      const { min, max } = getAllowedRange(selectedPrice);
+  function updateStoreCountPopup(count) {
+    const storeCount = document.getElementById("storeCount");
+    if (storeCount) {
+      storeCount.textContent = `${count} store${count !== 1 ? 's' : ''}`;
+    }
+  }
 
-      const scored = allProducts
-        .filter(p => p.title !== product.title)
-        .map(p => ({
-          ...p,
-          score: similarity(product.title, p.title || ""),
-          priceNum: parsePrice(p.price)
-        }))
-        .filter(p => p.priceNum >= min && p.priceNum <= max)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 10);
+  function addPopup(message) {
+    const container = document.getElementById("popupContainer");
+    const div = document.createElement("div");
+    div.className = "popupMessage";
+    div.textContent = message;
+    container.appendChild(div);
+    setTimeout(() => div.remove(), 2000);
+  }
 
-      if (scored.length) {
-        html += `<div class="similar-list">`;
-        scored.forEach(sim => {
-          const link = sim.link || sim.product_link;
-          html += `
-            <div class="similar-item" data-link="${link}">
-              <img src="${sim.img || sim.image_url || ""}" alt="${sim.title}">
-              <span class="product-link">${sim.title}</span>
-              <div>${sim.price} | ${sim.source || ""}</div>
-            </div>
-          `;
-        });
-        html += `</div>`;
+  function clearPopups() {
+    const container = document.getElementById("popupContainer");
+    const storePopup = container.querySelector(".popupMessage.stores");
+    container.innerHTML = "";
+    if (storePopup) container.appendChild(storePopup);
+    document.getElementById("storeCount").textContent = "0 stores";
+    showStoreSpinner(false);
+  }
 
-        // dots
-        dots.innerHTML = "";
-        scored.forEach((_, i) => {
-          const dot = document.createElement("span");
-          if (i === 0) dot.classList.add("active");
-          dots.appendChild(dot);
-        });
+  /* ----------- INCREMENTAL RENDERING FOR CACHED RESULTS ---------- */
+  function showSavedResults() {
+    const saved = localStorage.getItem("lastSearchResults");
+    const lastQuery = localStorage.getItem("lastSearchQuery");
+    if (saved && lastQuery) {
+      allCachedProducts = JSON.parse(saved);
+      renderedCount = 0;
 
-        // listen to scroll
-        setTimeout(() => {
-          const list = body.querySelector(".similar-list");
-          list.addEventListener("scroll", () => {
-            const index = Math.round(list.scrollLeft / (list.scrollWidth / scored.length));
-            dots.querySelectorAll("span").forEach((d, i) =>
-              d.classList.toggle("active", i === index)
-            );
-          });
-        }, 50);
-      } else {
-        html += `<p><em>No similar products found in range.</em></p>`;
-        dots.innerHTML = "";
+      globalStoreSet.clear();
+      allCachedProducts.forEach(p => {
+        if (p.source) globalStoreSet.add(cleanStoreName(p.source.trim()));
+      });
+      updateStoreCountPopup(globalStoreSet.size);
+
+      const resultsDiv = document.getElementById("results");
+      resultsDiv.innerHTML = `<div id="products"></div>`;
+      loadNextBatch();
+
+      if (allCachedProducts.length > BATCH_SIZE) {
+        setTimeout(loadRemainingBatches, 300);
       }
     }
+  }
 
-    body.innerHTML = html;
-    overlay.style.display = "flex";
-
-    // attach click listeners to whole cards
-    body.querySelectorAll(".similar-item").forEach(el => {
-      el.addEventListener("click", () => {
-        const link = el.dataset.link;
-        sendProductLink(link);
-      });
+  function loadNextBatch() {
+    const productsDiv = document.getElementById("products");
+    const nextBatch = allCachedProducts.slice(renderedCount, renderedCount + BATCH_SIZE);
+    nextBatch.forEach(p => {
+      productsDiv.innerHTML += renderProductHTML(p);
     });
-  };
-})();
+    renderedCount += nextBatch.length;
+  }
+
+  function loadRemainingBatches() {
+    if (renderedCount < allCachedProducts.length) {
+      loadNextBatch();
+      requestAnimationFrame(() => {
+        setTimeout(loadRemainingBatches, 50);
+      });
+    }
+  }
+
+  function restoreSearchQuery() {
+    const lastQuery = localStorage.getItem("lastSearchQuery");
+    if (lastQuery) document.getElementById("query").value = lastQuery;
+  }
+
+  // ---------------- IMAGE OVERLAY WITH TITLE ----------------
+  function showOverlay(src, title = "") {
+    document.getElementById("overlayImg").src = src;
+    document.getElementById("overlayTitle").textContent = title;
+    document.getElementById("overlay").style.display = "flex";
+  }
+
+  function hideOverlay(event) {
+    if (event) event.stopPropagation();
+    document.getElementById("overlay").style.display = "none";
+  }
+
+  function parsePrice(priceStr) {
+    const match = (priceStr || "").replace(/[^\d.]/g, "");
+    return parseFloat(match) || 0;
+  }
+
+  /* ---------------- SSE STREAM ---------------- */
+  function startScrape(url, query, resultList, resultsDiv, onComplete) {
+    const source = new EventSource(`${url}?q=${encodeURIComponent(query)}`);
+    source.onmessage = function(event) {
+      console.log("SSE event:", event.data);
+      const item = JSON.parse(event.data);
+
+      if (item.title || item.price || item.link || item.product_link) {
+        resultList.push(item);
+        localStorage.setItem("lastSearchResults", JSON.stringify(resultList));
+        updateProductCountPopup(resultList.length);
+
+        if (item.source) {
+          globalStoreSet.add(cleanStoreName(item.source.trim()));
+          updateStoreCountPopup(globalStoreSet.size);
+        }
+
+        if (!document.getElementById("products")) {
+          resultsDiv.innerHTML = `<div id="products"></div>`;
+        }
+        document.getElementById("products").innerHTML += renderProductHTML(item);
+      } else if (item.error) {
+        console.error("Scraper error:", item.error);
+      }
+    };
+    source.onerror = function() {
+      source.close();
+      onComplete();
+    };
+  }
+
+  function showStoreSpinner(isVisible) {
+    const spinner = document.getElementById("storeSpinner");
+    if (spinner) spinner.style.display = isVisible ? "inline-block" : "none";
+  }
+
+  function search() {
+    const query = document.getElementById("query").value.trim();
+    const resultsDiv = document.getElementById("results");
+    if (!query) {
+      resultsDiv.innerHTML = "<p>Please enter a search term.</p>";
+      return;
+    }
+
+    clearPopups();
+    globalStoreSet.clear();
+    resultsDiv.innerHTML = "<p>Loading products...</p>";
+    const resultList = [];
+    localStorage.setItem("lastSearchQuery", query);
+
+    showStoreSpinner(true);
+
+    startScrape("http://127.0.0.1:5000/scrape", query, resultList, resultsDiv, function() {
+      resultsDiv.innerHTML += "<p style='color:green;'>✅ Finished scraping.</p>";
+      showStoreSpinner(false);
+    });
+  }
+
+  /* ---------------- STORE OVERLAY ---------------- */
+  function showStoreOverlay() {
+    document.getElementById("storeOverlay").style.display = "block";
+    showStoreSpinner(true);
+  }
+
+  function hideStoreOverlay(event) {
+    if (event) event.stopPropagation();
+    document.getElementById("storeOverlay").style.display = "none";
+  }
+
+  /* ---------------- INIT ---------------- */
+  showSavedResults();
+  restoreSearchQuery();
+
+  /* ---------------- PRODUCT DETAILS OVERLAY ---------------- */
+  let lastTapTime = 0;
+
+  function buildProductOverlay(productCard) {
+    const img = productCard.querySelector("img")?.src || "";
+    const title = productCard.querySelector("h3")?.innerText || "Untitled";
+    const price = productCard.querySelector(".price")?.innerText || "N/A";
+    const store = productCard.querySelector(".store-name")?.innerText || "";
+    return `
+      <div style="text-align:center; padding:20px;">
+        <h2 style="margin-bottom:10px;">${title}</h2>
+        <img src="${img}" alt="${title}" style="max-width:80%; border-radius:12px; margin-bottom:15px;">
+        <p><strong>Price:</strong> ${price}</p>
+        <p><strong>${store}</strong></p>
+      </div>
+    `;
+  }
+
+  // Desktop: double click
+  document.addEventListener("dblclick", function (e) {
+    const productCard = e.target.closest(".product");
+    if (!productCard) return;
+    if (e.target.closest("button") || e.target.tagName === "IMG") return;
+    const html = buildProductOverlay(productCard);
+    showAiOverlay(html);
+  });
+
+  // Mobile: detect double tap
+  document.addEventListener("touchend", function (e) {
+    const now = Date.now();
+    const productCard = e.target.closest(".product");
+    if (!productCard) return;
+    if (e.target.closest("button") || e.target.tagName === "IMG") return;
+    if (now - lastTapTime < 300) {
+      const html = buildProductOverlay(productCard);
+      showAiOverlay(html);
+    }
+    lastTapTime = now;
+  });
+  </script>
+
+  <script src="/static_updated/js/welcome.js"></script>
+  <script src="/static_updated/js/store.js"></script>
+  <script src="/static_updated/js/incsorter.js"></script>
+  <script src="/static_updated/js/overlay.js"></script>
+
+</body>
+</html>
