@@ -1,16 +1,15 @@
 (function () {
-  // --- Inject overlay HTML once ---
   const overlay = document.createElement("div");
   overlay.id = "aiOverlay";
   overlay.innerHTML = `
     <div class="ai-overlay-content">
       <span class="close-btn" id="aiOverlayClose">×</span>
       <div id="aiOverlayBody"></div>
+      <div class="scroll-dots" id="similarDots"></div>
     </div>
   `;
   document.body.appendChild(overlay);
 
-  // --- Inject CSS ---
   const style = document.createElement("style");
   style.textContent = `
     #aiOverlay {
@@ -48,50 +47,105 @@
       color: red;
       z-index: 1000000;
     }
-    #aiOverlay h2 {
-      margin-top: 0;
+
+    /* Main product layout */
+    #aiOverlay .main-product {
+      display: flex;
+      align-items: flex-start;
+      gap: 15px;
+      margin-bottom: 20px;
     }
-    #aiOverlay img {
-      max-width: 60%;
+    #aiOverlay .main-product img {
+      width: 160px;
       height: auto;
-      border-radius: 12px;
-      margin: 20px auto;
-      display: block;
+      border-radius: 10px;
+      flex-shrink: 0;
+    }
+    #aiOverlay .main-details {
+      flex-grow: 1;
+    }
+    #aiOverlay .main-details h2 {
+      font-size: 18px;
+      margin: 0 0 10px;
+    }
+    #aiOverlay .main-details p {
+      margin: 5px 0;
+      font-size: 14px;
     }
 
-    /* Horizontal scroll for similar products */
+    /* Decorative spacer card */
+    #aiOverlay .spacer-card {
+      height: 80px;
+      border-radius: 20px;
+      background: #f1f1f1;
+      margin: 20px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #aaa;
+      font-size: 14px;
+      font-style: italic;
+    }
+
+    /* Horizontal scroll similar products */
     #aiOverlay .similar-list {
-      margin-top: 30px;
       display: flex;
       gap: 12px;
       overflow-x: auto;
       padding-bottom: 10px;
+      margin-bottom: 15px;
     }
     #aiOverlay .similar-item {
       flex: 0 0 auto;
-      width: 220px;
+      width: 180px;
+      height: 120px; /* 1/4 previous height */
       background: #f9f9f9;
       border: 1px solid #ddd;
-      border-radius: 6px;
-      padding: 10px;
+      border-radius: 8px;
+      padding: 6px;
       text-align: center;
       box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
     }
     #aiOverlay .similar-item img {
       max-width: 100%;
-      height: auto;
-      border-radius: 6px;
-      margin-bottom: 8px;
+      max-height: 60px;
+      object-fit: contain;
+      border-radius: 4px;
+      margin: 0 auto 4px;
     }
     #aiOverlay .similar-item a {
       text-decoration: none;
       color: #007bff;
+      font-size: 12px;
+      line-height: 1.2em;
       font-weight: bold;
-      display: block;
-      margin-bottom: 5px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
-    #aiOverlay .similar-item a:hover {
-      text-decoration: underline;
+    #aiOverlay .similar-item div {
+      font-size: 11px;
+      color: #444;
+    }
+
+    /* Scroll dots */
+    #aiOverlay .scroll-dots {
+      text-align: center;
+      margin-top: 8px;
+    }
+    #aiOverlay .scroll-dots span {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      margin: 0 3px;
+      background: #ccc;
+      border-radius: 50%;
+    }
+    #aiOverlay .scroll-dots span.active {
+      background: #007bff;
     }
 
     @keyframes fadeIn {
@@ -101,12 +155,10 @@
   `;
   document.head.appendChild(style);
 
-  // --- Close handler ---
   overlay.querySelector("#aiOverlayClose").addEventListener("click", () => {
     overlay.style.display = "none";
   });
 
-  // --- Utility functions ---
   function parsePrice(priceStr) {
     if (!priceStr) return 0;
     return Number(priceStr.replace(/[^\d]/g, "")) || 0;
@@ -126,19 +178,26 @@
     return { min: 0, max: Infinity };
   }
 
-  // --- Expose function globally ---
   window.showAiOverlay = function (product) {
     const body = document.getElementById("aiOverlayBody");
+    const dots = document.getElementById("similarDots");
 
-    // Base product info
+    // --- Base product ---
     let html = `
-      <h2>${product.title}</h2>
-      <img src="${product.img || product.image_url || ""}" alt="${product.title}">
-      <p><strong>Price:</strong> ${product.price}</p>
-      <p><strong>Source:</strong> ${product.source || product.store || ""}</p>
+      <div class="main-product">
+        <img src="${product.img || product.image_url || ""}" alt="${product.title}">
+        <div class="main-details">
+          <h2>${product.title}</h2>
+          <p><strong>Price:</strong> ${product.price}</p>
+          <p><strong>Source:</strong> ${product.source || product.store || ""}</p>
+        </div>
+      </div>
     `;
 
-    // --- Load cached products ---
+    // --- Spacer card ---
+    html += `<div class="spacer-card">Just a spacer card</div>`;
+
+    // --- Similar products ---
     let allProducts = [];
     try {
       const saved = localStorage.getItem("lastSearchResults");
@@ -147,7 +206,6 @@
       console.error("Failed to parse cache", e);
     }
 
-    // --- Find similar ---
     if (allProducts.length > 1) {
       const selectedPrice = parsePrice(product.price);
       const { min, max } = getAllowedRange(selectedPrice);
@@ -164,19 +222,39 @@
         .slice(0, 10);
 
       if (scored.length) {
-        html += `<div class="similar-list"><h3>Similar Products</h3>`;
+        html += `<div class="similar-list">`;
         scored.forEach(sim => {
           html += `
             <div class="similar-item">
               <img src="${sim.img || sim.image_url || ""}" alt="${sim.title}">
               <a href="${sim.link || sim.product_link}" target="_blank">${sim.title}</a>
-              <div><strong>${sim.price}</strong> | ${sim.source || ""}</div>
+              <div>${sim.price} | ${sim.source || ""}</div>
             </div>
           `;
         });
         html += `</div>`;
+
+        // dots
+        dots.innerHTML = "";
+        scored.forEach((_, i) => {
+          const dot = document.createElement("span");
+          if (i === 0) dot.classList.add("active");
+          dots.appendChild(dot);
+        });
+
+        // listen to scroll
+        setTimeout(() => {
+          const list = body.querySelector(".similar-list");
+          list.addEventListener("scroll", () => {
+            const index = Math.round(list.scrollLeft / (list.scrollWidth / scored.length));
+            dots.querySelectorAll("span").forEach((d, i) =>
+              d.classList.toggle("active", i === index)
+            );
+          });
+        }, 50);
       } else {
         html += `<p><em>No similar products found in range.</em></p>`;
+        dots.innerHTML = "";
       }
     }
 
