@@ -1,20 +1,9 @@
-// static_updated/js/overlay.js
-(function () {
-  // --- Create overlay container ---
-  const overlay = document.createElement("div");
-  overlay.id = "aiOverlay";
-  overlay.innerHTML = `
-    <div class="ai-overlay-content">
-      <span class="close-btn" id="aiOverlayClose">×</span>
-      <div id="aiOverlayBody"></div>
-    </div>
-  `;
-  document.body.appendChild(overlay);
+// overlay.js
 
-  // --- Inject CSS ---
+(function () {
+  // Inject styles
   const style = document.createElement("style");
   style.textContent = `
-    /* Full-screen overlay */
     #aiOverlay {
       position: fixed;
       top: 0;
@@ -22,327 +11,272 @@
       width: 99%;
       height: 99%;
       background: #fff;
+      z-index: 99999;
       display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 999999;
-      font-family: 'Quicksand', sans-serif;
+      flex-direction: column;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    #aiOverlay.active { display: flex; }
+
+    #aiOverlayClose {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      font-size: 28px;
+      font-weight: bold;
+      color: red;
+      cursor: pointer;
+      z-index: 100000;
     }
 
-    /* Card that fills the overlay */
-    #aiOverlay .ai-overlay-content {
-      width: 99%;
-      height: 99%;
-      padding: 20px;
-      background: #ffffff;
-      border-radius: 12px;
-      box-shadow: 0 6px 30px rgba(0,0,0,0.15);
+    #aiOverlayBody {
+      flex: 1;
       display: flex;
       flex-direction: column;
-      position: relative;
+      padding: 20px;
       overflow: hidden;
     }
 
-    /* Floating red close button */
-    #aiOverlay .close-btn {
-      position: fixed;
-      top: 16px;
-      right: 22px;
-      z-index: 1000000;
-      font-size: 32px;
-      line-height: 1;
-      color: #ff3b3b;
-      cursor: pointer;
-      background: transparent;
-      border: none;
-    }
-
-    /* Main product area (fixed height, takes only needed space) */
-    #aiOverlay .main-product {
+    .main-product {
       display: flex;
-      gap: 16px;
-      align-items: flex-start;
-      flex: 0 0 auto;
-    }
-    #aiOverlay .main-product img {
-      width: 160px;
-      height: auto;
-      border-radius: 10px;
-      object-fit: contain;
       flex-shrink: 0;
+      margin-bottom: 20px;
+      align-items: center;
     }
-    #aiOverlay .main-details {
-      flex: 1 1 auto;
-      min-width: 0;
+    .main-product img {
+      width: 150px;
+      height: 150px;
+      object-fit: contain;
+      margin-right: 15px;
     }
-    #aiOverlay .main-details h2 {
-      font-size: 16px; /* lowered font size */
-      margin: 0 0 8px;
+    .main-product .main-details {
+      flex: 1;
+    }
+    .main-product h2 {
+      margin: 0 0 8px 0;
+      font-size: 18px;
       line-height: 1.2;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
     }
-    #aiOverlay .main-details .price-source {
+    .main-product .price-source {
       display: flex;
       gap: 12px;
-      align-items: center;
-      justify-content: flex-start;
-      font-size: 14px;
-    }
-    #aiOverlay .main-details .price-source .price {
-      font-weight: 700;
-    }
-    #aiOverlay .main-details .price-source .source {
-      color: #555;
-    }
-
-    /* Spacer card: takes remaining vertical space */
-    #aiOverlay .spacer-card {
-      flex: 1 1 100%;
-      min-height: 40vh; /* ensure it's large and pushes similar products down */
-      border-radius: 18px;
-      background: #f2f2f2;
-      margin: 18px 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #9aa1a6;
-      font-style: italic;
       font-size: 14px;
     }
 
-    /* Similar products container pinned at bottom */
-    #aiOverlay .similar-container {
-      flex: 0 0 auto;
-      margin-top: 12px;
-      padding-top: 10px;
-      border-top: 1px solid rgba(0,0,0,0.04);
-      background: transparent;
+    .space-card {
+      flex-shrink: 0;
+      width: 100%;
+      height: 200px;
+      background: #f1f1f1;
+      border-radius: 20px;
+      margin: 20px 0;
     }
 
-    /* Horizontal scroll list */
-    #aiOverlay .similar-list {
+    .similar-products-container {
+      flex-shrink: 0;
+      margin-top: auto;
+    }
+
+    .similar-products {
       display: flex;
-      gap: 12px;
       overflow-x: auto;
-      padding: 12px 6px;
-      scroll-snap-type: x mandatory;
-      -webkit-overflow-scrolling: touch;
+      gap: 12px;
+      padding: 10px 0;
+      scroll-behavior: smooth;
     }
 
-    /* Compact cards (about 1/4 previous height) */
-    #aiOverlay .similar-item {
+    .similar-item {
       flex: 0 0 auto;
       width: 180px;
       height: 120px;
-      background: #fafafa;
-      border: 1px solid #e6e6e6;
+      background: #fff;
+      border: 1px solid #ccc;
       border-radius: 8px;
-      padding: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-      scroll-snap-align: start;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+      padding: 8px;
     }
-    #aiOverlay .similar-item img {
-      max-width: 100%;
-      max-height: 60px;
-      object-fit: contain;
-      margin: 0 auto;
-      border-radius: 4px;
+    .similar-item h4 {
+      font-size: 14px;
+      margin: 0 0 4px 0;
+      line-height: 1.2;
     }
-    #aiOverlay .similar-item a {
-      display: block;
-      font-size: 12px;
-      font-weight: 600;
-      color: #0a66ff;
+    .similar-item h4 a {
       text-decoration: none;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      margin-top: 6px;
+      color: #0077cc;
     }
-    #aiOverlay .similar-item .meta {
-      font-size: 11px;
-      color: #444;
+    .similar-item .sim-body {
       display: flex;
-      justify-content: space-between;
+      align-items: center;
       gap: 8px;
     }
-
-    /* Dots below the carousel */
-    #aiOverlay .dots {
-      display: flex;
-      gap: 6px;
-      justify-content: center;
-      margin-top: 8px;
-      padding-bottom: 6px;
+    .similar-item img {
+      width: 60px;
+      height: 60px;
+      object-fit: contain;
     }
-    #aiOverlay .dots span {
+    .similar-item .sim-details {
+      font-size: 12px;
+    }
+
+    /* scroll dots */
+    .scroll-dots {
+      display: flex;
+      justify-content: center;
+      margin-top: 6px;
+    }
+    .scroll-dots .dot {
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: #d0d6db;
+      background: #bbb;
+      margin: 0 4px;
     }
-    #aiOverlay .dots span.active {
-      background: #0a66ff;
-    }
-
-    @media (max-width: 600px) {
-      #aiOverlay .main-product img { width: 120px; }
-      #aiOverlay .similar-item { width: 150px; height: 100px; }
+    .scroll-dots .dot.active {
+      background: #333;
     }
   `;
   document.head.appendChild(style);
 
-  // --- Close handler ---
-  overlay.querySelector("#aiOverlayClose").addEventListener("click", () => {
-    overlay.style.display = "none";
+  // Build overlay container
+  const overlay = document.createElement("div");
+  overlay.id = "aiOverlay";
+  overlay.innerHTML = `
+    <span id="aiOverlayClose">×</span>
+    <div id="aiOverlayBody"></div>
+  `;
+  document.body.appendChild(overlay);
+
+  // Close logic
+  document.getElementById("aiOverlayClose").addEventListener("click", () => {
+    overlay.classList.remove("active");
   });
 
-  // --- Utility helpers ---
-  function parsePrice(priceStr) {
-    if (!priceStr) return 0;
-    // remove non digits
-    return Number((priceStr + "").replace(/[^\d]/g, "")) || 0;
-  }
-  function similarity(a, b) {
-    if (!a || !b) return 0;
-    const tokensA = new Set(a.toLowerCase().split(/\s+/));
-    const tokensB = new Set(b.toLowerCase().split(/\s+/));
-    let common = 0;
-    tokensA.forEach(t => { if (tokensB.has(t)) common++; });
-    return common / Math.max(tokensA.size || 1, tokensB.size || 1);
-  }
-  function getAllowedRange(price) {
-    if (price <= 10000) return { min: price * 0.5, max: price * 1.5 };
-    if (price > 10000 && price <= 40000) return { min: price * 0.7, max: price * 1.3 };
-    if (price > 40000 && price <= 100000) return { min: price * 0.9, max: price * 1.1 };
-    return { min: 0, max: Infinity };
+  // Escape HTML util
+  function escapeHtml(str) {
+    return (str || "").replace(/[&<>"']/g, function (m) {
+      return ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;",
+      }[m]);
+    });
   }
 
-  // --- Show overlay: receives product object, reads cache itself ---
+  // Price parser
+  function parsePrice(priceStr) {
+    if (!priceStr) return 0;
+    return Number(priceStr.replace(/[^\d]/g, "")) || 0;
+  }
+
+  // Similarity calc
+  function similarity(a, b) {
+    const tokensA = new Set((a || "").toLowerCase().split(/\s+/));
+    const tokensB = new Set((b || "").toLowerCase().split(/\s+/));
+    let common = 0;
+    tokensA.forEach((t) => {
+      if (tokensB.has(t)) common++;
+    });
+    return common / Math.max(tokensA.size, tokensB.size);
+  }
+
+  // Price tolerance
+  function withinPriceRange(base, candidate) {
+    if (!base || !candidate) return false;
+    const diff = Math.abs(candidate - base);
+    if (base <= 10000) return candidate <= base * 1.5;
+    if (base <= 40000) return diff <= base * 0.3;
+    if (base <= 100000) return diff <= base * 0.1;
+    return true;
+  }
+
+  // --- Show overlay: receives product object, reads cache ---
   window.showAiOverlay = function (product) {
     const body = document.getElementById("aiOverlayBody");
 
-    // Build header/main product HTML
+    // Similar products
+    const saved = localStorage.getItem("lastSearchResults");
+    let products = [];
+    try {
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) products = parsed;
+      }
+    } catch (err) {
+      console.error("parse error", err);
+    }
+
+    const selectedPrice = parsePrice(product.price);
+    const scored = products
+      .filter((p) => p !== product)
+      .map((p) => ({
+        ...p,
+        score: similarity(product.title, p.title),
+        priceNum: parsePrice(p.price),
+      }))
+      .filter((p) => withinPriceRange(selectedPrice, p.priceNum))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 30)
+      .sort(
+        (a, b) =>
+          Math.abs(a.priceNum - selectedPrice) -
+          Math.abs(b.priceNum - selectedPrice)
+      )
+      .slice(0, 10);
+
     let html = `
       <div class="main-product">
-        <img src="${product.img || product.image_url || ''}" alt="${escapeHtml(product.title || '')}">
+        <img src="${product.img || product.image_url || ""}" alt="${escapeHtml(
+      product.title || ""
+    )}">
         <div class="main-details">
-          <h2 title="${escapeHtml(product.title || '')}">${escapeHtml(product.title || '')}</h2>
+          <h2 title="${escapeHtml(product.title || "")}">${escapeHtml(
+      product.title || ""
+    )}</h2>
           <div class="price-source">
-            <div class="price">${escapeHtml(product.price || 'N/A')}</div>
-            <div class="source">${escapeHtml(product.source || product.store || '')}</div>
+            <div class="price">${escapeHtml(product.price || "N/A")}</div>
+            <div class="source">${escapeHtml(product.source || "N/A")}</div>
           </div>
         </div>
       </div>
 
-      <div class="spacer-card">decorative spacer</div>
+      <div class="space-card"></div>
+
+      <div class="similar-products-container">
+        <div class="similar-products">
+          ${scored
+            .map(
+              (p) => `
+            <div class="similar-item">
+              <h4><a href="${p.link ||
+                "#"}" target="_blank">${escapeHtml(p.title || "Untitled")}</a></h4>
+              <div class="sim-body">
+                <img src="${p.img || p.image_url || ""}" alt="${escapeHtml(
+                p.title || ""
+              )}">
+                <div class="sim-details">
+                  <div class="price">${escapeHtml(p.price || "N/A")}</div>
+                  <div class="source">${escapeHtml(p.source || "N/A")}</div>
+                </div>
+              </div>
+            </div>
+          `
+            )
+            .join("")}
+        </div>
+        <div class="scroll-dots">
+          ${scored.map(
+            (_, i) => `<div class="dot ${i === 0 ? "active" : ""}"></div>`
+          ).join("")}
+        </div>
+      </div>
     `;
 
-    // Load cached products
-    let allProducts = [];
-    try {
-      const saved = localStorage.getItem("lastSearchResults");
-      if (saved) allProducts = JSON.parse(saved);
-    } catch (e) {
-      console.error("overlay: failed to parse cached products", e);
-      allProducts = [];
-    }
-
-    // Find similar products with price window & title-similarity
-    let similarList = [];
-    if (allProducts && allProducts.length > 1) {
-      const selectedPrice = parsePrice(product.price);
-      const { min, max } = getAllowedRange(selectedPrice);
-
-      similarList = allProducts
-        .filter(p => (p.title || '') !== (product.title || ''))
-        .map(p => {
-          return {
-            item: p,
-            score: similarity(product.title || '', p.title || ''),
-            priceNum: parsePrice(p.price)
-          };
-        })
-        // price filter within allowed range
-        .filter(x => x.priceNum >= min && x.priceNum <= max)
-        // sort by similarity desc
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 10)
-        .map(x => x.item);
-    }
-
-    // Render similar products at the bottom
-    if (similarList.length) {
-      html += `
-        <div class="similar-container">
-          <div class="similar-list" id="similarList">
-            ${similarList.map(sim => `
-              <div class="similar-item">
-                <img src="${escapeAttr(sim.img || sim.image_url || '')}" alt="${escapeAttr(sim.title || '')}">
-                <a href="${escapeAttr(sim.link || sim.product_link || '#')}" target="_blank" rel="noopener">${escapeHtml(sim.title || '')}</a>
-                <div class="meta"><span>${escapeHtml(sim.price || '')}</span><span>${escapeHtml(sim.source || '')}</span></div>
-              </div>
-            `).join('')}
-          </div>
-          <div class="dots" id="similarDots"></div>
-        </div>
-      `;
-    } else {
-      html += `<div class="similar-container"><div style="padding:12px;color:#777;">No similar products found in range.</div></div>`;
-    }
-
     body.innerHTML = html;
-    overlay.style.display = "flex";
-
-    // After rendering, wire up dots and scroll behavior if list exists
-    const list = document.getElementById('similarList');
-    const dotsEl = document.getElementById('similarDots');
-
-    if (list && dotsEl) {
-      const cards = Array.from(list.querySelectorAll('.similar-item'));
-      dotsEl.innerHTML = cards.map((_, i) => `<span class="${i === 0 ? 'active' : ''}"></span>`).join('');
-
-      // compute per-card width including gap
-      const gap = 12;
-      const cardWidth = (cards[0] ? cards[0].offsetWidth : 180) + gap;
-
-      // snap behavior: scroll-snap is in CSS already; but we'll update active dot on scroll
-      let ticking = false;
-      list.addEventListener('scroll', () => {
-        if (!ticking) {
-          window.requestAnimationFrame(() => {
-            const index = Math.round(list.scrollLeft / cardWidth);
-            const dots = dotsEl.querySelectorAll('span');
-            dots.forEach((d, i) => d.classList.toggle('active', i === index));
-            ticking = false;
-          });
-          ticking = true;
-        }
-      });
-
-      // optional: click dots to scroll
-      const dots = Array.from(dotsEl.querySelectorAll('span'));
-      dots.forEach((dot, idx) => {
-        dot.addEventListener('click', () => {
-          list.scrollTo({ left: idx * cardWidth, behavior: 'smooth' });
-        });
-      });
-    }
+    overlay.classList.add("active");
   };
-
-  // small HTML-escape helpers to avoid injecting raw values
-  function escapeHtml(str) {
-    if (!str) return '';
-    return String(str).replace(/[&<>"']/g, function (s) {
-      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[s];
-    });
-  }
-  function escapeAttr(str) {
-    return escapeHtml(str).replace(/"/g, '&quot;');
-  }
 })();
