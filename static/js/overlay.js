@@ -103,7 +103,7 @@
     #aiOverlay .similar-item {
       flex: 0 0 auto;
       width: 180px;
-      height: 120px; /* 1/4 previous height */
+      height: 120px;
       background: #f9f9f9;
       border: 1px solid #ddd;
       border-radius: 8px;
@@ -113,9 +113,14 @@
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+      cursor: pointer;
 
       /* Snap alignment */
       scroll-snap-align: start;
+      transition: transform 0.2s ease;
+    }
+    #aiOverlay .similar-item:hover {
+      transform: scale(1.05);
     }
     #aiOverlay .similar-item img {
       max-width: 100%;
@@ -123,9 +128,9 @@
       object-fit: contain;
       border-radius: 4px;
       margin: 0 auto 4px;
+      pointer-events: none; /* let parent div handle click */
     }
-    #aiOverlay .similar-item a {
-      text-decoration: none;
+    #aiOverlay .product-link {
       color: #007bff;
       font-size: 12px;
       line-height: 1.2em;
@@ -133,10 +138,12 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      pointer-events: none; /* clickable through parent */
     }
     #aiOverlay .similar-item div {
       font-size: 11px;
       color: #444;
+      pointer-events: none;
     }
 
     /* Scroll dots */
@@ -186,6 +193,24 @@
     return { min: 0, max: Infinity };
   }
 
+  /* ---------------- SEND PRODUCT LINK TO BACKEND ---------------- */
+  function sendProductLink(link) {
+    if (!link) return;
+    fetch("http://127.0.0.1:5000/open-link", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: link })
+    })
+    .then(res => {
+      if (res.ok) {
+        addPopup("opening in browser");
+      } else {
+        addPopup("failed to open");
+      }
+    })
+    .catch(() => addPopup("⚠️ Error sending link"));
+  }
+
   window.showAiOverlay = function (product) {
     const body = document.getElementById("aiOverlayBody");
     const dots = document.getElementById("similarDots");
@@ -232,10 +257,11 @@
       if (scored.length) {
         html += `<div class="similar-list">`;
         scored.forEach(sim => {
+          const link = sim.link || sim.product_link;
           html += `
-            <div class="similar-item">
+            <div class="similar-item" data-link="${link}">
               <img src="${sim.img || sim.image_url || ""}" alt="${sim.title}">
-              <a href="${sim.link || sim.product_link}" target="_blank">${sim.title}</a>
+              <span class="product-link">${sim.title}</span>
               <div>${sim.price} | ${sim.source || ""}</div>
             </div>
           `;
@@ -268,5 +294,13 @@
 
     body.innerHTML = html;
     overlay.style.display = "flex";
+
+    // attach click listeners to whole cards
+    body.querySelectorAll(".similar-item").forEach(el => {
+      el.addEventListener("click", () => {
+        const link = el.dataset.link;
+        sendProductLink(link);
+      });
+    });
   };
 })();
