@@ -33,7 +33,8 @@
       padding: 20px;
       width: 99%;
       height: 99%;
-      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
       position: relative;
       animation: fadeIn 0.25s ease-in-out;
     }
@@ -53,7 +54,6 @@
       display: flex;
       align-items: flex-start;
       gap: 15px;
-      margin-bottom: 20px;
     }
     #aiOverlay .main-product img {
       width: 160px;
@@ -73,9 +73,9 @@
       font-size: 14px;
     }
 
-    /* Decorative spacer card */
+    /* Decorative spacer card - taller */
     #aiOverlay .spacer-card {
-      height: 80px;
+      flex-grow: 1; /* takes up empty vertical space */
       border-radius: 20px;
       background: #f1f1f1;
       margin: 20px 0;
@@ -87,18 +87,20 @@
       font-style: italic;
     }
 
-    /* Horizontal scroll similar products */
+    /* Horizontal scroll similar products - pinned at bottom */
+    #aiOverlay .similar-container {
+      margin-top: auto; /* pushes it to bottom */
+    }
     #aiOverlay .similar-list {
       display: flex;
       gap: 12px;
       overflow-x: auto;
       padding-bottom: 10px;
-      margin-bottom: 15px;
     }
     #aiOverlay .similar-item {
       flex: 0 0 auto;
       width: 180px;
-      height: 120px; /* 1/4 previous height */
+      height: 120px; /* compact cards */
       background: #f9f9f9;
       border: 1px solid #ddd;
       border-radius: 8px;
@@ -134,7 +136,7 @@
     /* Scroll dots */
     #aiOverlay .scroll-dots {
       text-align: center;
-      margin-top: 8px;
+      margin: 6px 0;
     }
     #aiOverlay .scroll-dots span {
       display: inline-block;
@@ -182,7 +184,7 @@
     const body = document.getElementById("aiOverlayBody");
     const dots = document.getElementById("similarDots");
 
-    // --- Base product ---
+    // Base product
     let html = `
       <div class="main-product">
         <img src="${product.img || product.image_url || ""}" alt="${product.title}">
@@ -192,12 +194,9 @@
           <p><strong>Source:</strong> ${product.source || product.store || ""}</p>
         </div>
       </div>
+      <div class="spacer-card">Just a spacer card</div>
     `;
 
-    // --- Spacer card ---
-    html += `<div class="spacer-card">Just a spacer card</div>`;
-
-    // --- Similar products ---
     let allProducts = [];
     try {
       const saved = localStorage.getItem("lastSearchResults");
@@ -222,7 +221,7 @@
         .slice(0, 10);
 
       if (scored.length) {
-        html += `<div class="similar-list">`;
+        html += `<div class="similar-container"><div class="similar-list">`;
         scored.forEach(sim => {
           html += `
             <div class="similar-item">
@@ -232,9 +231,8 @@
             </div>
           `;
         });
-        html += `</div>`;
+        html += `</div></div>`;
 
-        // dots
         dots.innerHTML = "";
         scored.forEach((_, i) => {
           const dot = document.createElement("span");
@@ -242,7 +240,6 @@
           dots.appendChild(dot);
         });
 
-        // listen to scroll
         setTimeout(() => {
           const list = body.querySelector(".similar-list");
           list.addEventListener("scroll", () => {
