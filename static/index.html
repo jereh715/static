@@ -7,7 +7,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static_updated/css/style.css">
   <link rel="preload" href="/static_updated/sans.woff2" as="font" type="font/woff2" crossorigin="anonymous">
-
 </head>
 <body>
 
@@ -334,6 +333,24 @@
   /* ---------------- INIT ---------------- */
   showSavedResults();
   restoreSearchQuery();
+
+  /* ---------------- AI ACTIVATED CLICK HANDLER ---------------- */
+  document.addEventListener("click", function (e) {
+    const productCard = e.target.closest(".product");
+    if (!productCard) return;
+
+    // Ignore clicks on buttons or image
+    if (e.target.closest("button") || e.target.tagName === "IMG") return;
+
+    // Show popup for 3 seconds
+    const container = document.getElementById("popupContainer");
+    const div = document.createElement("div");
+    div.className = "popupMessage";
+    div.textContent = "🤖 AI Activated!";
+    container.appendChild(div);
+
+    setTimeout(() => div.remove(), 3000);
+  });
   </script>
 
   <script src="/static_updated/js/welcome.js"></script>
