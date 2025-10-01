@@ -58,23 +58,42 @@
       margin: 20px auto;
       display: block;
     }
+
+    /* Horizontal scroll for similar products */
     #aiOverlay .similar-list {
       margin-top: 30px;
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding-bottom: 10px;
     }
     #aiOverlay .similar-item {
+      flex: 0 0 auto;
+      width: 220px;
       background: #f9f9f9;
       border: 1px solid #ddd;
       border-radius: 6px;
       padding: 10px;
-      margin-bottom: 10px;
+      text-align: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    #aiOverlay .similar-item img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 6px;
+      margin-bottom: 8px;
     }
     #aiOverlay .similar-item a {
       text-decoration: none;
       color: #007bff;
+      font-weight: bold;
+      display: block;
+      margin-bottom: 5px;
     }
     #aiOverlay .similar-item a:hover {
       text-decoration: underline;
     }
+
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
@@ -100,18 +119,11 @@
     tokensA.forEach(t => { if (tokensB.has(t)) common++; });
     return common / Math.max(tokensA.size, tokensB.size);
   }
-
-  // --- Get allowed price range ---
   function getAllowedRange(price) {
-    if (price <= 10000) {
-      return { min: price * 0.5, max: price * 1.5 }; // ±50%
-    } else if (price > 10000 && price <= 40000) {
-      return { min: price * 0.7, max: price * 1.3 }; // ±30%
-    } else if (price > 40000 && price <= 100000) {
-      return { min: price * 0.9, max: price * 1.1 }; // ±10%
-    } else {
-      return { min: 0, max: Infinity }; // No restriction
-    }
+    if (price <= 10000) return { min: price * 0.5, max: price * 1.5 };
+    if (price > 10000 && price <= 40000) return { min: price * 0.7, max: price * 1.3 };
+    if (price > 40000 && price <= 100000) return { min: price * 0.9, max: price * 1.1 };
+    return { min: 0, max: Infinity };
   }
 
   // --- Expose function globally ---
@@ -126,18 +138,16 @@
       <p><strong>Source:</strong> ${product.source || product.store || ""}</p>
     `;
 
-    // --- Load all cached products ---
+    // --- Load cached products ---
     let allProducts = [];
     try {
       const saved = localStorage.getItem("lastSearchResults");
-      if (saved) {
-        allProducts = JSON.parse(saved);
-      }
+      if (saved) allProducts = JSON.parse(saved);
     } catch (e) {
       console.error("Failed to parse cache", e);
     }
 
-    // --- Find top 10 similar ---
+    // --- Find similar ---
     if (allProducts.length > 1) {
       const selectedPrice = parsePrice(product.price);
       const { min, max } = getAllowedRange(selectedPrice);
@@ -149,26 +159,24 @@
           score: similarity(product.title, p.title || ""),
           priceNum: parsePrice(p.price)
         }))
-        // keep only those within allowed price range
         .filter(p => p.priceNum >= min && p.priceNum <= max)
         .sort((a, b) => b.score - a.score)
-        .slice(0, 30);
+        .slice(0, 10);
 
-      const final10 = scored.slice(0, 10);
-
-      if (final10.length) {
+      if (scored.length) {
         html += `<div class="similar-list"><h3>Similar Products</h3>`;
-        final10.forEach(sim => {
+        scored.forEach(sim => {
           html += `
             <div class="similar-item">
-              <a href="${sim.link || sim.product_link}" target="_blank">${sim.title}</a><br>
-              <strong>${sim.price}</strong> | ${sim.source || ""}
+              <img src="${sim.img || sim.image_url || ""}" alt="${sim.title}">
+              <a href="${sim.link || sim.product_link}" target="_blank">${sim.title}</a>
+              <div><strong>${sim.price}</strong> | ${sim.source || ""}</div>
             </div>
           `;
         });
         html += `</div>`;
       } else {
-        html += `<p><em>No similar products found in price range.</em></p>`;
+        html += `<p><em>No similar products found in range.</em></p>`;
       }
     }
 
