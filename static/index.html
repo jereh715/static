@@ -331,17 +331,31 @@
   showSavedResults();
   restoreSearchQuery();
 
-  /* ---------------- AI ACTIVATED DOUBLE CLICK / DOUBLE TAP ---------------- */
+  /* ---------------- PRODUCT DETAILS OVERLAY ---------------- */
   let lastTapTime = 0;
+
+  function buildProductOverlay(productCard) {
+    const img = productCard.querySelector("img")?.src || "";
+    const title = productCard.querySelector("h3")?.innerText || "Untitled";
+    const price = productCard.querySelector(".price")?.innerText || "N/A";
+    const store = productCard.querySelector(".store-name")?.innerText || "";
+    return `
+      <div style="text-align:center; padding:20px;">
+        <h2 style="margin-bottom:10px;">${title}</h2>
+        <img src="${img}" alt="${title}" style="max-width:80%; border-radius:12px; margin-bottom:15px;">
+        <p><strong>Price:</strong> ${price}</p>
+        <p><strong>${store}</strong></p>
+      </div>
+    `;
+  }
 
   // Desktop: double click
   document.addEventListener("dblclick", function (e) {
     const productCard = e.target.closest(".product");
     if (!productCard) return;
     if (e.target.closest("button") || e.target.tagName === "IMG") return;
-
-    // 🔹 Open overlay instead of popup
-    showAiOverlay("<h2>🤖 AI Assistant</h2><p>Overlay activated on this product!</p>");
+    const html = buildProductOverlay(productCard);
+    showAiOverlay(html);
   });
 
   // Mobile: detect double tap
@@ -350,10 +364,9 @@
     const productCard = e.target.closest(".product");
     if (!productCard) return;
     if (e.target.closest("button") || e.target.tagName === "IMG") return;
-
     if (now - lastTapTime < 300) {
-      // 🔹 Open overlay instead of popup
-      showAiOverlay("<h2>🤖 AI Assistant</h2><p>Overlay activated on this product!</p>");
+      const html = buildProductOverlay(productCard);
+      showAiOverlay(html);
     }
     lastTapTime = now;
   });
