@@ -12,6 +12,13 @@
 
   const style = document.createElement("style");
   style.textContent = `
+    @font-face {
+      font-family: 'GeminiSans';
+      src: url('static_updated/js/sans.woff2') format('woff2');
+      font-weight: normal;
+      font-style: normal;
+    }
+
     #aiOverlay {
       position: fixed;
       top: 0; left: 0;
@@ -75,20 +82,21 @@
 
     /* Gemini insight card */
     #aiOverlay .spacer-card {
-      height: 300px;               /* fixed height */
+      height: 300px; 
       border-radius: 20px;
-      background: #f1f1f1;
-      margin: 20px 0 10px 0;       /* spacing before similar products */
+      background: linear-gradient(135deg, blue, red, black);
+      margin: 20px 0 10px 0; 
       padding: 15px;
       display: flex;
       flex-direction: column;
       align-items: flex-start;
       justify-content: flex-start;
-      color: #444;
+      color: #fff;
       font-size: 14px;
-      font-style: italic;
       text-align: left;
-      overflow-y: auto;            /* scroll inside */
+      overflow-y: auto;
+      font-family: 'GeminiSans', sans-serif;
+      line-height: 1.4;
     }
 
     /* Horizontal scroll similar products */
@@ -99,7 +107,6 @@
       padding-bottom: 10px;
       margin-bottom: 15px;
 
-      /* Smooth scroll + snap */
       scroll-behavior: smooth;
       scroll-snap-type: x mandatory;
       -webkit-overflow-scrolling: touch;
@@ -249,6 +256,15 @@
     }
   }
 
+  /* --------- Simple Markdown parser for *bold* --------- */
+  function formatInsightText(text) {
+    if (!text) return "";
+    // Replace **bold** and *bold* with <b>
+    return text
+      .replace(/\*\*(.*?)\*\*/g, "<b>$1</b>")
+      .replace(/\*(.*?)\*/g, "<b>$1</b>");
+  }
+
   /* ---------------- SHOW OVERLAY ---------------- */
   window.showAiOverlay = async function (product) {
     const body = document.getElementById("aiOverlayBody");
@@ -308,7 +324,6 @@
         });
         html += `</div>`;
 
-        // dots
         dots.innerHTML = "";
         scored.forEach((_, i) => {
           const dot = document.createElement("span");
@@ -324,12 +339,10 @@
     body.innerHTML = html;
     overlay.style.display = "flex";
 
-    // attach click listeners to similar cards
     body.querySelectorAll(".similar-item").forEach(el => {
       el.addEventListener("click", () => sendProductLink(el.dataset.link));
     });
 
-    // scroll haze effect
     const list = body.querySelector(".similar-list");
     if (list) {
       list.addEventListener("scroll", () => {
@@ -349,12 +362,11 @@
       });
     }
 
-    // fetch Gemini insight (single call)
     if (scored.length) {
       const spacer = document.getElementById("spacerCard");
       spacer.textContent = "Fetching product insights...";
       const insight = await fetchGeminiInsight(product, scored);
-      spacer.textContent = insight;
+      spacer.innerHTML = formatInsightText(insight); // apply bold formatting
     }
   };
 })();
