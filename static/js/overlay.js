@@ -73,20 +73,22 @@
       font-size: 14px;
     }
 
-    /* Spacer card for insights */
+    /* Gemini insight card */
     #aiOverlay .spacer-card {
-      min-height: 100px;
+      height: 120px;               /* fixed height */
       border-radius: 20px;
       background: #f1f1f1;
-      margin: 20px 0 10px 0; /* spacing before similar products */
+      margin: 20px 0 10px 0;       /* spacing before similar products */
       padding: 15px;
       display: flex;
-      align-items: center;
-      justify-content: center;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: flex-start;
       color: #444;
       font-size: 14px;
       font-style: italic;
-      text-align: center;
+      text-align: left;
+      overflow-y: auto;            /* scroll inside */
     }
 
     /* Horizontal scroll similar products */
