@@ -75,7 +75,7 @@
 
     /* Gemini insight card */
     #aiOverlay .spacer-card {
-      height: 120px;               /* fixed height */
+      height: 350px;               /* fixed height */
       border-radius: 20px;
       background: #f1f1f1;
       margin: 20px 0 10px 0;       /* spacing before similar products */
