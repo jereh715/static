@@ -74,6 +74,14 @@
     #aiOverlay .main-details h2 {
       font-size: 18px;
       margin: 0 0 10px;
+
+      /* Truncate to 5 lines */
+      display: -webkit-box;
+      -webkit-line-clamp: 5;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      word-break: break-word;
     }
     #aiOverlay .main-details p {
       margin: 5px 0;
@@ -148,7 +156,10 @@
       font-weight: bold;
       overflow: hidden;
       text-overflow: ellipsis;
-      white-space: nowrap;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;   /* truncate to 2 lines */
+      -webkit-box-orient: vertical;
+      word-break: break-word;
       pointer-events: none;
     }
     #aiOverlay .similar-item div {
