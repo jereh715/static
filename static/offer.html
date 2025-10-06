@@ -56,7 +56,7 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.2);
       cursor: pointer;
       position: relative;
-      z-index: 3100; /* above overlay */
+      z-index: 3100;
     }
 
     #menu-panel {
@@ -137,19 +137,34 @@
 
     // Theme detection logic
     const themeStatus = document.getElementById("theme-status");
-    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const query = '(prefers-color-scheme: dark)';
 
-    function updateThemeStatus() {
-      themeStatus.textContent = media.matches
-        ? "🌙 Device is in Dark Mode"
-        : "☀️ Device is in Light Mode";
+    if (window.matchMedia) {
+      const media = window.matchMedia(query);
+
+      function updateThemeStatus() {
+        if (typeof media.matches !== "boolean") {
+          themeStatus.textContent = "⚠️ No theme detected (unsupported).";
+        } else if (media.matches) {
+          themeStatus.textContent = "🌙 Device is in Dark Mode";
+        } else {
+          themeStatus.textContent = "☀️ Device is in Light Mode";
+        }
+      }
+
+      // Initial detection
+      updateThemeStatus();
+
+      // Listen for theme changes (if supported)
+      if (typeof media.addEventListener === "function") {
+        media.addEventListener("change", updateThemeStatus);
+      } else if (typeof media.addListener === "function") {
+        // Legacy fallback
+        media.addListener(updateThemeStatus);
+      }
+    } else {
+      themeStatus.textContent = "⚠️ No theme detected (matchMedia not supported).";
     }
-
-    // Initial detection
-    updateThemeStatus();
-
-    // Listen for theme changes
-    media.addEventListener('change', updateThemeStatus);
   </script>
 </body>
 </html>
