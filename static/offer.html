@@ -2,51 +2,41 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Cached Results with Hamburger Menu</title>
+  <title>Hamburger Menu + Theme Detection</title>
+  <meta name="color-scheme" content="light dark">
   <style>
     body {
       font-family: Arial, sans-serif;
       margin: 0;
-      padding: 0;
       background: #f5f5f5;
+      color: #222;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        background: #121212;
+        color: #f5f5f5;
+      }
+      #menu-btn {
+        background: #333;
+        color: #fff;
+      }
+      #menu-panel {
+        background: #222;
+        color: #fff;
+      }
+      #menu-panel a {
+        color: #fff;
+      }
+      #menu-panel a:hover {
+        background: #333;
+      }
     }
 
     h1 {
       margin: 20px;
-    }
-
-    #results {
-      margin: 20px;
-      padding: 0;
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-      gap: 16px;
-    }
-
-    .card {
-      background: #fff;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      padding: 12px;
-      cursor: pointer;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      transition: transform 0.2s;
-    }
-
-    .card:hover {
-      transform: scale(1.02);
-    }
-
-    #similar {
-      margin: 20px;
-    }
-
-    .similar-item {
-      background: #fff;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      padding: 10px;
-      margin-bottom: 8px;
+      font-size: 20px;
     }
 
     /* Hamburger menu styles */
@@ -72,7 +62,7 @@
     #menu-panel {
       position: fixed;
       top: 0;
-      left: -220px; /* hidden initially */
+      left: -220px;
       width: 200px;
       height: 100%;
       background: #fff;
@@ -89,10 +79,6 @@
       text-decoration: none;
       color: #333;
       border-bottom: 1px solid #eee;
-    }
-
-    #menu-panel a:hover {
-      background: #f5f5f5;
     }
 
     #menu-panel.active {
@@ -120,22 +106,16 @@
   <div id="hamburger-menu">
     <button id="menu-btn">☰</button>
 
-    <!-- Side menu panel -->
     <div id="menu-panel">
-      <a href="/">Browse</a>
-      <a href="/chat">Chat</a>
-      <a href="/offers">Offers</a>
+      <a href="#">Home</a>
+      <a href="#">Settings</a>
+      <a href="#">About</a>
     </div>
 
-    <!-- Overlay -->
     <div id="menu-overlay"></div>
   </div>
 
-  <h1>Cached Search Results</h1>
-  <div id="results"></div>
-
-  <h2 style="margin:20px;">Similar Products</h2>
-  <div id="similar"></div>
+  <h1 id="theme-status">Detecting theme...</h1>
 
   <script>
     // Hamburger menu logic
@@ -143,11 +123,6 @@
       const menuBtn = document.getElementById("menu-btn");
       const menuPanel = document.getElementById("menu-panel");
       const menuOverlay = document.getElementById("menu-overlay");
-
-      if (!menuBtn || !menuPanel || !menuOverlay) {
-        console.error("Menu elements not found!");
-        return;
-      }
 
       menuBtn.addEventListener("click", () => {
         const isActive = menuPanel.classList.toggle("active");
@@ -160,83 +135,21 @@
       });
     })();
 
-    // Utility: normalize price
-    function parsePrice(priceStr) {
-      if (!priceStr) return 0;
-      return Number(priceStr.replace(/[^\d]/g, "")) || 0;
+    // Theme detection logic
+    const themeStatus = document.getElementById("theme-status");
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+
+    function updateThemeStatus() {
+      themeStatus.textContent = media.matches
+        ? "🌙 Device is in Dark Mode"
+        : "☀️ Device is in Light Mode";
     }
 
-    // Utility: similarity based on token overlap
-    function similarity(a, b) {
-      const tokensA = new Set(a.toLowerCase().split(/\s+/));
-      const tokensB = new Set(b.toLowerCase().split(/\s+/));
-      let common = 0;
-      tokensA.forEach(t => { if (tokensB.has(t)) common++; });
-      return common / Math.max(tokensA.size, tokensB.size);
-    }
+    // Initial detection
+    updateThemeStatus();
 
-    // Render cards and attach click handler
-    const resultsDiv = document.getElementById("results");
-    const saved = localStorage.getItem("lastSearchResults");
-
-    let products = [];
-    try {
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          products = parsed;
-        }
-      }
-    } catch (err) {
-      console.error("Error parsing saved results:", err);
-    }
-
-    if (products.length === 0) {
-      resultsDiv.textContent = "No cached results found.";
-    } else {
-      products.forEach(p => {
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `<h3>${p.title}</h3>
-                          <p><strong>${p.price}</strong> | ${p.source}</p>`;
-        card.addEventListener("click", () => showSimilar(p));
-        resultsDiv.appendChild(card);
-      });
-    }
-
-    // Show similar items based on rules
-    function showSimilar(selected) {
-      const selectedPrice = parsePrice(selected.price);
-
-      // Score all products except the selected one
-      const scored = products
-        .filter(p => p !== selected)
-        .map(p => ({
-          ...p,
-          score: similarity(selected.title, p.title),
-          priceNum: parsePrice(p.price)
-        }))
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 30); // top 30 by similarity
-
-      // Then sort those by closeness in price
-      const priceSorted = scored.sort(
-        (a, b) => Math.abs(a.priceNum - selectedPrice) - Math.abs(b.priceNum - selectedPrice)
-      );
-
-      const final10 = priceSorted.slice(0, 10);
-
-      // Render similar items
-      const similarDiv = document.getElementById("similar");
-      similarDiv.innerHTML = "";
-      final10.forEach(p => {
-        const div = document.createElement("div");
-        div.className = "similar-item";
-        div.innerHTML = `<a href="${p.link}" target="_blank">${p.title}</a><br>
-                         <strong>${p.price}</strong> | ${p.source}`;
-        similarDiv.appendChild(div);
-      });
-    }
+    // Listen for theme changes
+    media.addEventListener('change', updateThemeStatus);
   </script>
 </body>
 </html>
