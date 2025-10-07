@@ -1,169 +1,97 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Hamburger Menu + Theme Detection</title>
-  <meta name="color-scheme" content="light dark">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Send Notification</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      margin: 0;
       background: #f5f5f5;
-      color: #222;
-      transition: background 0.3s, color 0.3s;
-    }
-
-    @media (prefers-color-scheme: dark) {
-      body {
-        background: #121212;
-        color: #f5f5f5;
-      }
-      #menu-btn {
-        background: #333;
-        color: #fff;
-      }
-      #menu-panel {
-        background: #222;
-        color: #fff;
-      }
-      #menu-panel a {
-        color: #fff;
-      }
-      #menu-panel a:hover {
-        background: #333;
-      }
-    }
-
-    h1 {
-      margin: 20px;
-      font-size: 20px;
-    }
-
-    /* Hamburger menu styles */
-    #hamburger-menu {
-      position: fixed;
-      top: 15px;
-      left: 15px;
-      z-index: 3000;
-    }
-
-    #menu-btn {
-      background: white;
-      border: none;
-      font-size: 24px;
-      padding: 8px 12px;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-      cursor: pointer;
-      position: relative;
-      z-index: 3100;
-    }
-
-    #menu-panel {
-      position: fixed;
-      top: 0;
-      left: -220px;
-      width: 200px;
-      height: 100%;
-      background: #fff;
-      box-shadow: 2px 0 10px rgba(0,0,0,0.2);
       display: flex;
-      flex-direction: column;
-      padding-top: 60px;
-      transition: left 0.3s ease;
-      z-index: 3200;
-    }
-
-    #menu-panel a {
-      padding: 15px;
-      text-decoration: none;
-      color: #333;
-      border-bottom: 1px solid #eee;
-    }
-
-    #menu-panel.active {
-      left: 0;
-    }
-
-    #menu-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
+      justify-content: center;
+      align-items: center;
       height: 100vh;
-      background: rgba(0,0,0,0.25);
-      display: none;
-      z-index: 3100;
     }
-
-    #menu-overlay.active {
-      display: block;
+    .container {
+      background: white;
+      padding: 20px 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      width: 90%;
+      max-width: 400px;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    input, textarea, button {
+      width: 100%;
+      font-size: 16px;
+      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+      border: none;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .status {
+      text-align: center;
+      margin-top: 10px;
+      font-size: 14px;
+      color: #333;
     }
   </style>
 </head>
 <body>
-  <!-- Hamburger Menu -->
-  <div id="hamburger-menu">
-    <button id="menu-btn">☰</button>
-
-    <div id="menu-panel">
-      <a href="#">Home</a>
-      <a href="#">Settings</a>
-      <a href="#">About</a>
-    </div>
-
-    <div id="menu-overlay"></div>
+  <div class="container">
+    <h2>📱 Send Notification</h2>
+    <input id="title" type="text" placeholder="Enter notification title..." />
+    <textarea id="message" rows="4" placeholder="Enter notification message..."></textarea>
+    <button onclick="sendNotification()">Send Notification</button>
+    <div id="status" class="status"></div>
   </div>
 
-  <h1 id="theme-status">Detecting theme...</h1>
-
   <script>
-    // Hamburger menu logic
-    (function() {
-      const menuBtn = document.getElementById("menu-btn");
-      const menuPanel = document.getElementById("menu-panel");
-      const menuOverlay = document.getElementById("menu-overlay");
+    async function sendNotification() {
+      const title = document.getElementById("title").value.trim();
+      const message = document.getElementById("message").value.trim();
+      const statusDiv = document.getElementById("status");
 
-      menuBtn.addEventListener("click", () => {
-        const isActive = menuPanel.classList.toggle("active");
-        menuOverlay.classList.toggle("active", isActive);
-      });
+      if (!title || !message) {
+        statusDiv.textContent = "⚠️ Please enter both a title and a message.";
+        return;
+      }
 
-      menuOverlay.addEventListener("click", () => {
-        menuPanel.classList.remove("active");
-        menuOverlay.classList.remove("active");
-      });
-    })();
+      statusDiv.textContent = "⏳ Sending notification...";
 
-    // Theme detection logic
-    const themeStatus = document.getElementById("theme-status");
-    const query = '(prefers-color-scheme: dark)';
+      try {
+        const response = await fetch("http://127.0.0.1:5000/notify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title, message })
+        });
 
-    if (window.matchMedia) {
-      const media = window.matchMedia(query);
+        const result = await response.json();
 
-      function updateThemeStatus() {
-        if (typeof media.matches !== "boolean") {
-          themeStatus.textContent = "⚠️ No theme detected (unsupported).";
-        } else if (media.matches) {
-          themeStatus.textContent = "🌙 Device is in Dark Mode";
+        if (result.status === "success") {
+          statusDiv.textContent = `✅ Notification sent: "${result.title}"`;
+          document.getElementById("title").value = "";
+          document.getElementById("message").value = "";
         } else {
-          themeStatus.textContent = "☀️ Device is in Light Mode";
+          statusDiv.textContent = `❌ Error: ${result.message || "Unknown error"}`;
         }
+      } catch (err) {
+        statusDiv.textContent = `❌ Failed to connect: ${err.message}`;
       }
-
-      // Initial detection
-      updateThemeStatus();
-
-      // Listen for theme changes (if supported)
-      if (typeof media.addEventListener === "function") {
-        media.addEventListener("change", updateThemeStatus);
-      } else if (typeof media.addListener === "function") {
-        // Legacy fallback
-        media.addListener(updateThemeStatus);
-      }
-    } else {
-      themeStatus.textContent = "⚠️ No theme detected (matchMedia not supported).";
     }
   </script>
 </body>
