@@ -36,22 +36,25 @@
           border-color: #444 !important;
         }
 
-        /* Overlays retain translucent darkness */
+        /* ⚫ Force dark backgrounds for transparent elements */
+        * {
+          background-color: rgba(10, 10, 10, 0.85) !important;
+          /* Ensures text readability on dark */
+          color: inherit;
+        }
+
+        /* But let key layout containers remain clean */
+        body, html, #results, .product, .search-container {
+          background-color: #000 !important;
+        }
+
+        /* Restore expected transparency for overlays & popups */
         #overlay,
         #menu-overlay,
         #storeOverlay {
           background-color: rgba(0, 0, 0, 0.7) !important;
         }
-
-        /* Core containers stay solid black */
-        body, html, #results, .product, .search-container {
-          background-color: #000 !important;
-        }
       `;
-
-      // After CSS inversion, run JS-based dark background enforcement
-      setTimeout(forceDarkBackgrounds, 100);
-
     } else {
       style.textContent = `
         html {
@@ -71,38 +74,13 @@
           color: #000 !important;
           border-color: #ccc !important;
         }
+
+        * {
+          background-color: transparent !important;
+          color: inherit;
+        }
       `;
-
-      // Remove forced dark backgrounds
-      document.querySelectorAll("[data-dark-bg]").forEach(el => {
-        el.style.backgroundColor = "";
-        el.removeAttribute("data-dark-bg");
-      });
     }
-  }
-
-  // 🧠 Dynamically find transparent / background-none elements
-  function forceDarkBackgrounds() {
-    const elements = document.querySelectorAll("*");
-    elements.forEach(el => {
-      const style = window.getComputedStyle(el);
-      const bg = style.backgroundColor;
-      const bgImg = style.backgroundImage;
-
-      const isTransparent =
-        bg === "rgba(0, 0, 0, 0)" ||
-        bg === "transparent" ||
-        bg === "inherit" ||
-        bg === "initial";
-
-      const hasNoBackgroundImage =
-        !bgImg || bgImg === "none" || bgImg === "initial";
-
-      if (isTransparent && hasNoBackgroundImage) {
-        el.style.backgroundColor = "rgba(10, 10, 10, 0.85)";
-        el.setAttribute("data-dark-bg", "true");
-      }
-    });
   }
 
   document.addEventListener("DOMContentLoaded", () => {
