@@ -15,6 +15,7 @@
 
     if (theme === "dark") {
       style.textContent = `
+        /* Invert everything for dark mode */
         html {
           filter: invert(1) hue-rotate(180deg);
           background-color: #000 !important;
@@ -22,22 +23,21 @@
           transition: filter 0.3s ease, background-color 0.3s ease;
         }
 
-        /* Re-invert media (so they stay normal) */
+        /* Re-invert images and media so they appear normal */
         img, picture, video, iframe, canvas, svg {
           filter: invert(1) hue-rotate(180deg) !important;
         }
 
-        /* 🧊 Prevent inversion for light UI elements (like hamburger menu) */
-        #hamburger-menu,
-        #menu-btn,
-        #menu-panel,
-        #menu-overlay {
+        /* 🟡 Re-invert ONLY the menu button so it stays visible */
+        #menu-btn {
           filter: invert(1) hue-rotate(180deg) !important;
         }
 
-        /* Optional small cleanup */
-        * {
-          box-shadow: none;
+        /* Optional: make background behind menu button slightly darker */
+        #menu-btn {
+          background: #111 !important;
+          color: #fff !important;
+          border-color: #444 !important;
         }
       `;
     } else {
@@ -51,11 +51,11 @@
         img, picture, video, iframe, canvas, svg {
           filter: none !important;
         }
-        #hamburger-menu,
-        #menu-btn,
-        #menu-panel,
-        #menu-overlay {
+        #menu-btn {
           filter: none !important;
+          background: #fff !important;
+          color: #000 !important;
+          border-color: #ccc !important;
         }
       `;
     }
