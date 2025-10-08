@@ -15,7 +15,7 @@
 
     if (theme === "dark") {
       style.textContent = `
-        /* Invert everything for dark mode */
+        /* 🌑 Global dark mode inversion */
         html {
           filter: invert(1) hue-rotate(180deg);
           background-color: #000 !important;
@@ -23,23 +23,35 @@
           transition: filter 0.3s ease, background-color 0.3s ease;
         }
 
-        /* Re-invert images and media so they appear normal */
+        /* Re-invert media so they appear normal */
         img, picture, video, iframe, canvas, svg {
           filter: invert(1) hue-rotate(180deg) !important;
         }
 
-        /* 🟡 Re-invert ONLY the menu button so it stays visible */
+        /* 🟡 Menu button correction */
         #menu-btn {
           filter: invert(1) hue-rotate(180deg) !important;
-        }
-
-        /* Optional: make background behind menu button slightly darker */
-        #menu-btn {
           background: #111 !important;
           color: #fff !important;
           border-color: #444 !important;
         }
+
+        /* Overlays retain translucent darkness */
+        #overlay,
+        #menu-overlay,
+        #storeOverlay {
+          background-color: rgba(0, 0, 0, 0.7) !important;
+        }
+
+        /* Core containers stay solid black */
+        body, html, #results, .product, .search-container {
+          background-color: #000 !important;
+        }
       `;
+
+      // After CSS inversion, run JS-based dark background enforcement
+      setTimeout(forceDarkBackgrounds, 100);
+
     } else {
       style.textContent = `
         html {
@@ -48,9 +60,11 @@
           color-scheme: light;
           transition: filter 0.3s ease, background-color 0.3s ease;
         }
+
         img, picture, video, iframe, canvas, svg {
           filter: none !important;
         }
+
         #menu-btn {
           filter: none !important;
           background: #fff !important;
@@ -58,7 +72,37 @@
           border-color: #ccc !important;
         }
       `;
+
+      // Remove forced dark backgrounds
+      document.querySelectorAll("[data-dark-bg]").forEach(el => {
+        el.style.backgroundColor = "";
+        el.removeAttribute("data-dark-bg");
+      });
     }
+  }
+
+  // 🧠 Dynamically find transparent / background-none elements
+  function forceDarkBackgrounds() {
+    const elements = document.querySelectorAll("*");
+    elements.forEach(el => {
+      const style = window.getComputedStyle(el);
+      const bg = style.backgroundColor;
+      const bgImg = style.backgroundImage;
+
+      const isTransparent =
+        bg === "rgba(0, 0, 0, 0)" ||
+        bg === "transparent" ||
+        bg === "inherit" ||
+        bg === "initial";
+
+      const hasNoBackgroundImage =
+        !bgImg || bgImg === "none" || bgImg === "initial";
+
+      if (isTransparent && hasNoBackgroundImage) {
+        el.style.backgroundColor = "rgba(10, 10, 10, 0.85)";
+        el.setAttribute("data-dark-bg", "true");
+      }
+    });
   }
 
   document.addEventListener("DOMContentLoaded", () => {
