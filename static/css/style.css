@@ -100,7 +100,7 @@ h1 {
   justify-content: center;
   align-items: center;
   z-index: 5000;
-  background: white;
+  background: transparent;
   height: 60px;
 }
 
