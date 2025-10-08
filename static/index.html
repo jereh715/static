@@ -64,6 +64,9 @@
   </div>
 
   <script>
+  /* ---------------- GLOBAL SPINNER STATE ---------------- */
+  window.spinnerState = { visible: false };
+
   /* ---------------- UTILITY: CLEAN STORE NAME ---------------- */
   function cleanStoreName(name) {
     if (!name) return "";
@@ -283,9 +286,18 @@
     };
   }
 
+  /* ---------------- UPDATED GLOBAL SPINNER FUNCTION ---------------- */
   function showStoreSpinner(isVisible) {
     const spinner = document.getElementById("storeSpinner");
     if (spinner) spinner.style.display = isVisible ? "inline-block" : "none";
+
+    // 🔹 Update global state
+    window.spinnerState.visible = !!isVisible;
+
+    // 🔹 Dispatch event so other scripts can listen
+    document.dispatchEvent(new CustomEvent("spinnerChange", {
+      detail: { visible: !!isVisible, time: new Date().toISOString() }
+    }));
   }
 
   function search() {
@@ -359,6 +371,9 @@
     lastTapTime = now;
   });
   </script>
+
+  <!-- Optionally add spinner.js here -->
+  <!-- <script src="/static_updated/js/spinner.js"></script> -->
 
   <script src="/static_updated/js/welcome.js"></script>
   <script src="/static_updated/js/store.js"></script>
