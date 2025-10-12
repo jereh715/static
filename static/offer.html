@@ -11,8 +11,6 @@
     input[type="text"], input[type="number"], textarea { width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; font-size:1rem; }
     button { padding:10px 14px; border-radius:8px; border:0; background:#0b76ef; color:white; font-weight:600; cursor:pointer; }
     button[disabled]{opacity:0.6; cursor:default;}
-    .row { display:flex; gap:12px; align-items:center; }
-    .row > * { flex:1; }
     .small { font-size:0.9rem; color:#555; }
     .status { margin-top:12px; padding:12px; border-radius:8px; background:#f6f8fb; border:1px solid #e6eefc; }
     .error { color:#b00020; font-weight:600; }
@@ -21,14 +19,15 @@
 </head>
 <body>
   <h1>Schedule a Notification</h1>
-  <p class="small">Send a notification request to the server endpoint <code>/notify_scheduler</code>. The server will either schedule it (on Android) or show an immediate fallback (desktop).</p>
+  <p class="small">
+    This version always uses the constant title <strong>Offers</strong>.  
+    The message field is your product query (e.g. <em>water dispenser</em>).
+  </p>
 
   <form id="notifyForm">
-    <label for="title">Title</label>
-    <input id="title" name="title" type="text" placeholder="E.g. Meeting reminder" required />
-
-    <label for="message">Message</label>
-    <textarea id="message" name="message" rows="3" placeholder="E.g. The meeting starts in 10 minutes" required></textarea>
+    <!-- removed title input -->
+    <label for="message">Product / Query</label>
+    <textarea id="message" name="message" rows="3" placeholder="E.g. water dispenser" required></textarea>
 
     <label for="delay">Delay (seconds)</label>
     <input id="delay" name="delay" type="number" min="0" step="1" value="30" required />
@@ -39,104 +38,95 @@
     </div>
   </form>
 
-  <div class="status" id="statusArea" aria-live="polite" hidden>
+  <div class="status" id="statusArea" hidden>
     <div id="statusText"></div>
     <pre id="responseRaw" style="margin-top:8px; white-space:pre-wrap; font-size:0.9rem;"></pre>
   </div>
 
 <script>
 (() => {
-  // Change if your Flask server is on another host/port
   const API_URL = "/notify_scheduler";
-
   const form = document.getElementById("notifyForm");
   const sendBtn = document.getElementById("sendBtn");
   const testBrowserBtn = document.getElementById("testBrowserBtn");
   const statusArea = document.getElementById("statusArea");
   const statusText = document.getElementById("statusText");
   const responseRaw = document.getElementById("responseRaw");
+  const CONSTANT_TITLE = "Offers";   // <── constant title here
 
   function showStatus(text, kind = "") {
     statusArea.hidden = false;
     statusText.textContent = text;
-    statusText.className = kind === "error" ? "error" : (kind === "success" ? "success" : "");
+    statusText.className = kind === "error" ? "error" :
+                           (kind === "success" ? "success" : "");
   }
 
   async function requestNotificationPermissionOnce() {
     if (!("Notification" in window)) return false;
     if (Notification.permission === "granted") return true;
     if (Notification.permission === "denied") return false;
-    try {
-      const p = await Notification.requestPermission();
-      return p === "granted";
-    } catch (e) {
-      return false;
-    }
+    const p = await Notification.requestPermission().catch(() => "denied");
+    return p === "granted";
   }
 
-  async function sendScheduleRequest(title, message, delay_seconds) {
+  async function sendScheduleRequest(message, delay_seconds) {
     sendBtn.disabled = true;
-    showStatus("Sending schedule request to server...", "");
+    showStatus("Sending schedule request to server...");
     responseRaw.textContent = "";
 
     try {
       const resp = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, message, delay_seconds })
+        body: JSON.stringify({ title: CONSTANT_TITLE, message, delay_seconds })
       });
-
       const data = await resp.json().catch(() => ({}));
       responseRaw.textContent = JSON.stringify({ status: resp.status, body: data }, null, 2);
 
       if (!resp.ok) {
-        showStatus(`Server responded with error (HTTP ${resp.status}). See details below.`, "error");
+        showStatus(`Server responded with error (HTTP ${resp.status}).`, "error");
       } else {
-        // Server returned success/scheduled JSON
-        showStatus("Server responded. See details below.", "success");
-        // If server indicates desktop fallback, optionally display a browser notification
+        showStatus("Server responded successfully.", "success");
         if (data.platform === "desktop" || data.status === "success") {
           const permitted = await requestNotificationPermissionOnce();
           if (permitted) {
-            new Notification(title, { body: `(Scheduled ${delay_seconds}s) ${message}` });
+            new Notification(CONSTANT_TITLE, { body: `(Scheduled ${delay_seconds}s) ${message}` });
           }
         }
       }
     } catch (err) {
-      showStatus("Request failed — is the Flask server running and reachable?", "error");
+      showStatus("Request failed — is the Flask server running?", "error");
       responseRaw.textContent = String(err);
     } finally {
       sendBtn.disabled = false;
     }
   }
 
-  form.addEventListener("submit", async (ev) => {
+  form.addEventListener("submit", async ev => {
     ev.preventDefault();
-    const title = document.getElementById("title").value.trim();
     const message = document.getElementById("message").value.trim();
-    let delay = Number(document.getElementById("delay").value);
-    if (!title || !message || Number.isNaN(delay) || delay < 0) {
-      showStatus("Please provide a valid title, message, and non-negative delay.", "error");
+    const delay = Number(document.getElementById("delay").value);
+    if (!message || Number.isNaN(delay) || delay < 0) {
+      showStatus("Please provide a valid message and non-negative delay.", "error");
       return;
     }
-    await sendScheduleRequest(title, message, delay);
+    await sendScheduleRequest(message, delay);
   });
 
   testBrowserBtn.addEventListener("click", async () => {
-    const title = document.getElementById("title").value.trim() || "Test notification";
-    const message = document.getElementById("message").value.trim() || "This is a local browser notification.";
+    const message = document.getElementById("message").value.trim() ||
+                    "This is a local browser notification.";
     const permitted = await requestNotificationPermissionOnce();
     if (!permitted) {
-      showStatus("Browser notification permission denied or unavailable. Server scheduling still works separately.", "error");
+      showStatus("Browser notification permission denied.", "error");
       return;
     }
-    new Notification(title, { body: message });
+    new Notification(CONSTANT_TITLE, { body: message });
     showStatus("Local browser notification shown.", "success");
   });
 
-  // Friendly hint if the page is served from file:// (CORS issues)
   if (location.protocol === "file:") {
-    showStatus("Notice: You're viewing this file via file:// — use a server (e.g. Flask static) to call the API.", "error");
+    showStatus("Notice: Open through a server to call the API.", "error");
   }
 })();
 </script>
