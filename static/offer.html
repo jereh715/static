@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Schedule Notification</title>
+  <title>Send Notification</title>
   <style>
     body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial; max-width:800px; margin:40px auto; padding:0 16px; color:#111; }
     h1 { font-size: 1.6rem; margin-bottom: 0.2rem; }
     label { display:block; margin:14px 0 6px; font-weight:600; }
-    input[type="text"], input[type="number"], textarea { width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; font-size:1rem; }
+    input[type="text"], textarea { width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; font-size:1rem; }
     button { padding:10px 14px; border-radius:8px; border:0; background:#0b76ef; color:white; font-weight:600; cursor:pointer; }
     button[disabled]{opacity:0.6; cursor:default;}
     .small { font-size:0.9rem; color:#555; }
@@ -18,22 +18,18 @@
   </style>
 </head>
 <body>
-  <h1>Schedule a Notification</h1>
+  <h1>Send Notification</h1>
   <p class="small">
     This version always uses the constant title <strong>Offers</strong>.  
     The message field is your product query (e.g. <em>water dispenser</em>).
   </p>
 
   <form id="notifyForm">
-    <!-- removed title input -->
     <label for="message">Product / Query</label>
     <textarea id="message" name="message" rows="3" placeholder="E.g. water dispenser" required></textarea>
 
-    <label for="delay">Delay (seconds)</label>
-    <input id="delay" name="delay" type="number" min="0" step="1" value="30" required />
-
     <div style="margin-top:12px; display:flex; gap:8px;">
-      <button id="sendBtn" type="submit">Schedule</button>
+      <button id="sendBtn" type="submit">Send Notification</button>
       <button id="testBrowserBtn" type="button">Show Local Browser Notification</button>
     </div>
   </form>
@@ -52,7 +48,7 @@
   const statusArea = document.getElementById("statusArea");
   const statusText = document.getElementById("statusText");
   const responseRaw = document.getElementById("responseRaw");
-  const CONSTANT_TITLE = "Offers";   // <── constant title here
+  const CONSTANT_TITLE = "Offers";   // constant title
 
   function showStatus(text, kind = "") {
     statusArea.hidden = false;
@@ -69,17 +65,18 @@
     return p === "granted";
   }
 
-  async function sendScheduleRequest(message, delay_seconds) {
+  async function sendNotificationRequest(message) {
     sendBtn.disabled = true;
-    showStatus("Sending schedule request to server...");
+    showStatus("Sending notification request to server...");
     responseRaw.textContent = "";
 
     try {
       const resp = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: CONSTANT_TITLE, message, delay_seconds })
+        body: JSON.stringify({ title: CONSTANT_TITLE, message })
       });
+
       const data = await resp.json().catch(() => ({}));
       responseRaw.textContent = JSON.stringify({ status: resp.status, body: data }, null, 2);
 
@@ -87,11 +84,9 @@
         showStatus(`Server responded with error (HTTP ${resp.status}).`, "error");
       } else {
         showStatus("Server responded successfully.", "success");
-        if (data.platform === "desktop" || data.status === "success") {
-          const permitted = await requestNotificationPermissionOnce();
-          if (permitted) {
-            new Notification(CONSTANT_TITLE, { body: `(Scheduled ${delay_seconds}s) ${message}` });
-          }
+        const permitted = await requestNotificationPermissionOnce();
+        if (permitted) {
+          new Notification(CONSTANT_TITLE, { body: message });
         }
       }
     } catch (err) {
@@ -105,12 +100,11 @@
   form.addEventListener("submit", async ev => {
     ev.preventDefault();
     const message = document.getElementById("message").value.trim();
-    const delay = Number(document.getElementById("delay").value);
-    if (!message || Number.isNaN(delay) || delay < 0) {
-      showStatus("Please provide a valid message and non-negative delay.", "error");
+    if (!message) {
+      showStatus("Please provide a message.", "error");
       return;
     }
-    await sendScheduleRequest(message, delay);
+    await sendNotificationRequest(message);
   });
 
   testBrowserBtn.addEventListener("click", async () => {
