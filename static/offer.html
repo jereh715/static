@@ -15,6 +15,9 @@
     .status { margin-top:12px; padding:12px; border-radius:8px; background:#f6f8fb; border:1px solid #e6eefc; }
     .error { color:#b00020; font-weight:600; }
     .success { color:#116622; font-weight:600; }
+    #notifContainer { margin-top: 24px; padding: 16px; background: #f9fafc; border: 1px solid #e3e9f4; border-radius: 8px; }
+    #notifContainer h2 { margin-top: 0; font-size: 1.2rem; }
+    pre.json-output { white-space: pre-wrap; background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 10px; font-size: 0.9rem; }
   </style>
 </head>
 <body>
@@ -31,6 +34,7 @@
     <div style="margin-top:12px; display:flex; gap:8px;">
       <button id="sendBtn" type="submit">Send Notification</button>
       <button id="testBrowserBtn" type="button">Show Local Browser Notification</button>
+      <button id="loadJsonBtn" type="button">Load Notification JSON</button>
     </div>
   </form>
 
@@ -39,16 +43,25 @@
     <pre id="responseRaw" style="margin-top:8px; white-space:pre-wrap; font-size:0.9rem;"></pre>
   </div>
 
+  <div id="notifContainer" hidden>
+    <h2>📦 Cached Notifications JSON</h2>
+    <pre id="notifJson" class="json-output"></pre>
+  </div>
+
 <script>
 (() => {
   const API_URL = "/notify_scheduler";
+  const JSON_URL = "/api/notifications";
   const form = document.getElementById("notifyForm");
   const sendBtn = document.getElementById("sendBtn");
   const testBrowserBtn = document.getElementById("testBrowserBtn");
+  const loadJsonBtn = document.getElementById("loadJsonBtn");
   const statusArea = document.getElementById("statusArea");
   const statusText = document.getElementById("statusText");
   const responseRaw = document.getElementById("responseRaw");
-  const CONSTANT_TITLE = "Offers";   // constant title
+  const notifContainer = document.getElementById("notifContainer");
+  const notifJson = document.getElementById("notifJson");
+  const CONSTANT_TITLE = "Offers";
 
   function showStatus(text, kind = "") {
     statusArea.hidden = false;
@@ -97,6 +110,20 @@
     }
   }
 
+  async function loadNotificationJson() {
+    notifContainer.hidden = false;
+    notifJson.textContent = "⏳ Loading notification JSON...";
+    try {
+      const resp = await fetch(JSON_URL);
+      const data = await resp.json();
+      notifJson.textContent = JSON.stringify(data, null, 2);
+      showStatus("Loaded notification JSON successfully.", "success");
+    } catch (err) {
+      notifJson.textContent = "❌ Failed to load notification JSON:\n" + err;
+      showStatus("Failed to load notification JSON.", "error");
+    }
+  }
+
   form.addEventListener("submit", async ev => {
     ev.preventDefault();
     const message = document.getElementById("message").value.trim();
@@ -118,6 +145,8 @@
     new Notification(CONSTANT_TITLE, { body: message });
     showStatus("Local browser notification shown.", "success");
   });
+
+  loadJsonBtn.addEventListener("click", loadNotificationJson);
 
   if (location.protocol === "file:") {
     showStatus("Notice: Open through a server to call the API.", "error");
