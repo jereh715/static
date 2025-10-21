@@ -15,46 +15,41 @@
 
     if (theme === "dark") {
       style.textContent = `
-        /* Invert everything for dark mode */
-        html {
-          filter: invert(1) hue-rotate(160deg);
-          background-color: #121212 !important; /* Dark grey, not pure black */
+        html, body {
+          background-color: #121212 !important; /* dark grey instead of white */
+          color: #e0e0e0 !important; /* light grey text for readability */
           color-scheme: dark;
-          transition: filter 0.3s ease, background-color 0.3s ease;
+          transition: background-color 0.3s ease, color 0.3s ease;
         }
 
-        /* Re-invert images and media so they appear normal */
+        /* Keep images and media as they are */
         img, picture, video, iframe, canvas, svg {
-          filter: invert(1) hue-rotate(180deg) !important;
+          filter: none !important;
         }
 
-        /* Re-invert ONLY the menu button so it stays visible */
+        /* Menu button styling in dark mode */
         #menu-btn {
-          filter: invert(1) hue-rotate(180deg) !important;
-        }
-
-        /* Darker background behind menu button for visibility */
-        #menu-btn {
-          background: #1e1e1e !important; /* Slightly lighter grey for contrast */
-          color: #fff !important;
+          background: #1e1e1e !important;
+          color: #ffffff !important;
           border-color: #444 !important;
         }
       `;
     } else {
       style.textContent = `
-        html {
-          filter: none;
-          background-color: #fff !important;
+        html, body {
+          background-color: #ffffff !important; /* white for light mode */
+          color: #000000 !important; /* black text */
           color-scheme: light;
-          transition: filter 0.3s ease, background-color 0.3s ease;
+          transition: background-color 0.3s ease, color 0.3s ease;
         }
+
         img, picture, video, iframe, canvas, svg {
           filter: none !important;
         }
+
         #menu-btn {
-          filter: none !important;
-          background: #fff !important;
-          color: #000 !important;
+          background: #ffffff !important;
+          color: #000000 !important;
           border-color: #ccc !important;
         }
       `;
