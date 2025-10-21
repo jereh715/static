@@ -18,7 +18,7 @@
         /* Invert everything for dark mode */
         html {
           filter: invert(1) hue-rotate(180deg);
-          background-color: #000 !important;
+          background-color: #A9A9A9 !important;
           color-scheme: dark;
           transition: filter 0.3s ease, background-color 0.3s ease;
         }
