@@ -18,7 +18,7 @@
         /* Invert everything for dark mode */
         html {
           filter: invert(1) hue-rotate(180deg);
-          background-color: #A9A9A9 !important;
+          background-color: #121212 !important; /* Dark grey, not pure black */
           color-scheme: dark;
           transition: filter 0.3s ease, background-color 0.3s ease;
         }
@@ -28,14 +28,14 @@
           filter: invert(1) hue-rotate(180deg) !important;
         }
 
-        /* 🟡 Re-invert ONLY the menu button so it stays visible */
+        /* Re-invert ONLY the menu button so it stays visible */
         #menu-btn {
           filter: invert(1) hue-rotate(180deg) !important;
         }
 
-        /* Optional: make background behind menu button slightly darker */
+        /* Darker background behind menu button for visibility */
         #menu-btn {
-          background: #111 !important;
+          background: #1e1e1e !important; /* Slightly lighter grey for contrast */
           color: #fff !important;
           border-color: #444 !important;
         }
