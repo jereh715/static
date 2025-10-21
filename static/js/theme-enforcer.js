@@ -17,7 +17,7 @@
       style.textContent = `
         /* Invert everything for dark mode */
         html {
-          filter: invert(1) hue-rotate(180deg);
+          filter: invert(1) hue-rotate(160deg);
           background-color: #121212 !important; /* Dark grey, not pure black */
           color-scheme: dark;
           transition: filter 0.3s ease, background-color 0.3s ease;
