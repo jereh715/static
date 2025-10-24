@@ -74,8 +74,6 @@
     #aiOverlay .main-details h2 {
       font-size: 18px;
       margin: 0 0 10px;
-
-      /* Truncate to 5 lines */
       display: -webkit-box;
       -webkit-line-clamp: 5;
       -webkit-box-orient: vertical;
@@ -107,6 +105,14 @@
       line-height: 1.4;
     }
 
+    /* Section title (new addition) */
+    #aiOverlay .section-title {
+      font-size: 16px;
+      font-weight: bold;
+      margin: 20px 0 10px 5px;
+      color: #222;
+    }
+
     /* Horizontal scroll similar products */
     #aiOverlay .similar-list {
       display: flex;
@@ -114,7 +120,6 @@
       overflow-x: auto;
       padding-bottom: 10px;
       margin-bottom: 15px;
-
       scroll-behavior: smooth;
       scroll-snap-type: x mandatory;
       -webkit-overflow-scrolling: touch;
@@ -157,7 +162,7 @@
       overflow: hidden;
       text-overflow: ellipsis;
       display: -webkit-box;
-      -webkit-line-clamp: 2;   /* truncate to 2 lines */
+      -webkit-line-clamp: 2;
       -webkit-box-orient: vertical;
       word-break: break-word;
       pointer-events: none;
@@ -270,7 +275,6 @@
   /* --------- Simple Markdown parser for *bold* --------- */
   function formatInsightText(text) {
     if (!text) return "";
-    // Replace **bold** and *bold* with <b>
     return text
       .replace(/\*\*(.*?)\*\*/g, "<b>$1</b>")
       .replace(/\*(.*?)\*/g, "<b>$1</b>");
@@ -293,10 +297,13 @@
       </div>
     `;
 
-    // --- Spacer card ---
+    // --- Spacer (Gemini AI section) ---
     html += `<div class="spacer-card" id="spacerCard">Generating insights...</div>`;
 
-    // --- Similar products ---
+    // --- Title before similar section (NEW ADDITION) ---
+    html += `<div class="section-title">Similar Products</div>`;
+
+    // --- Similar products logic ---
     let allProducts = [];
     try {
       const saved = localStorage.getItem("lastSearchResults");
@@ -318,8 +325,20 @@
           priceNum: parsePrice(p.price)
         }))
         .filter(p => p.priceNum >= min && p.priceNum <= max)
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 10);
+        .sort((a, b) => b.score - a.score);
+
+      // --- NEW: Ensure unique sources ---
+      const seenSources = new Set();
+      const unique = [];
+      for (const p of scored) {
+        const src = (p.source || p.store || "unknown").toLowerCase();
+        if (!seenSources.has(src)) {
+          seenSources.add(src);
+          unique.push(p);
+        }
+        if (unique.length >= 10) break; // max 10 products
+      }
+      scored = unique;
 
       if (scored.length) {
         html += `<div class="similar-list">`;
@@ -377,7 +396,7 @@
       const spacer = document.getElementById("spacerCard");
       spacer.textContent = "Fetching product insights...";
       const insight = await fetchGeminiInsight(product, scored);
-      spacer.innerHTML = formatInsightText(insight); // apply bold formatting
+      spacer.innerHTML = formatInsightText(insight);
     }
   };
 })();
