@@ -8,8 +8,14 @@
     body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial; max-width:800px; margin:40px auto; padding:0 16px; color:#111; }
     h1 { font-size: 1.6rem; margin-bottom: 0.2rem; }
     label { display:block; margin:14px 0 6px; font-weight:600; }
-    input[type="text"], textarea { width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; font-size:1rem; }
-    button { padding:10px 14px; border-radius:8px; border:0; background:#0b76ef; color:white; font-weight:600; cursor:pointer; }
+    input[type="text"], input[type="number"], textarea {
+      width:100%; padding:10px; border:1px solid #ddd;
+      border-radius:6px; font-size:1rem;
+    }
+    button {
+      padding:10px 14px; border-radius:8px; border:0;
+      background:#0b76ef; color:white; font-weight:600; cursor:pointer;
+    }
     button[disabled]{opacity:0.6; cursor:default;}
     .small { font-size:0.9rem; color:#555; }
     .status { margin-top:12px; padding:12px; border-radius:8px; background:#f6f8fb; border:1px solid #e6eefc; }
@@ -18,6 +24,8 @@
     #notifContainer { margin-top: 24px; padding: 16px; background: #f9fafc; border: 1px solid #e3e9f4; border-radius: 8px; }
     #notifContainer h2 { margin-top: 0; font-size: 1.2rem; }
     pre.json-output { white-space: pre-wrap; background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 10px; font-size: 0.9rem; }
+    .row { display:flex; gap:12px; flex-wrap:wrap; }
+    .row div { flex:1; min-width:120px; }
   </style>
 </head>
 <body>
@@ -30,6 +38,17 @@
   <form id="notifyForm">
     <label for="message">Product / Query</label>
     <textarea id="message" name="message" rows="3" placeholder="E.g. water dispenser" required></textarea>
+
+    <div class="row">
+      <div>
+        <label for="loops">Loops (count)</label>
+        <input id="loops" name="loops" type="number" min="0" value="6" />
+      </div>
+      <div>
+        <label for="seconds">Delay Between (seconds)</label>
+        <input id="seconds" name="seconds" type="number" min="10" value="7200" />
+      </div>
+    </div>
 
     <div style="margin-top:12px; display:flex; gap:8px;">
       <button id="sendBtn" type="submit">Send Notification</button>
@@ -78,16 +97,17 @@
     return p === "granted";
   }
 
-  async function sendNotificationRequest(message) {
+  async function sendNotificationRequest(message, loops, seconds) {
     sendBtn.disabled = true;
     showStatus("Sending notification request to server...");
     responseRaw.textContent = "";
 
     try {
+      const payload = { title: CONSTANT_TITLE, message, loops, seconds };
       const resp = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: CONSTANT_TITLE, message })
+        body: JSON.stringify(payload)
       });
 
       const data = await resp.json().catch(() => ({}));
@@ -127,11 +147,25 @@
   form.addEventListener("submit", async ev => {
     ev.preventDefault();
     const message = document.getElementById("message").value.trim();
+    const loopsInput = document.getElementById("loops").value;
+    const secondsInput = document.getElementById("seconds").value;
+
+    const loops = loopsInput === "" ? 6 : parseInt(loopsInput, 10);
+    const seconds = secondsInput === "" ? 7200 : parseInt(secondsInput, 10);
+
     if (!message) {
       showStatus("Please provide a message.", "error");
       return;
     }
-    await sendNotificationRequest(message);
+
+    // Inform user of mode
+    if (loops === 0) {
+      showStatus("Instant notification mode — sending immediately.", "success");
+    } else {
+      showStatus(`Scheduling ${loops} notifications every ${seconds} seconds.`, "success");
+    }
+
+    await sendNotificationRequest(message, loops, seconds);
   });
 
   testBrowserBtn.addEventListener("click", async () => {
