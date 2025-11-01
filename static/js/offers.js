@@ -22,7 +22,7 @@ async function triggerOfferScheduler() {
   try {
     const payload = {
       title: "Offers",
-      message: "waterdispenser",
+      message: "shoes",
       loops: 0,
       seconds: 0
     };
