@@ -257,12 +257,19 @@
     return parseFloat(match) || 0;
   }
 
+  /* ---------------- UPDATED startScrape WITH LAZY RENDERING ---------------- */
   function startScrape(url, query, resultList, resultsDiv, onComplete) {
     const source = new EventSource(`${url}?q=${encodeURIComponent(query)}`);
+    let allReceived = [];
+    let renderedCount = 0;
+    const INITIAL_RENDER = 50;
+    const BATCH_SIZE = 50;
+
     source.onmessage = function(event) {
       const item = JSON.parse(event.data);
 
       if (item.title || item.price || item.link || item.product_link) {
+        allReceived.push(item);
         resultList.push(item);
         localStorage.setItem("lastSearchResults", JSON.stringify(resultList));
         updateProductCountPopup(resultList.length);
@@ -275,11 +282,31 @@
         if (!document.getElementById("products")) {
           resultsDiv.innerHTML = `<div id="products"></div>`;
         }
-        document.getElementById("products").innerHTML += renderProductHTML(item);
+
+        // Render only first 50
+        if (renderedCount < INITIAL_RENDER) {
+          document.getElementById("products").insertAdjacentHTML("beforeend", renderProductHTML(item));
+          renderedCount++;
+        }
       } else if (item.error) {
         console.error("Scraper error:", item.error);
       }
     };
+
+    // Lazy rendering on scroll
+    window.addEventListener("scroll", () => {
+      const scrollBottom = window.innerHeight + window.scrollY;
+      const docHeight = document.body.offsetHeight;
+
+      if (scrollBottom >= docHeight - 200) {
+        const container = document.getElementById("products");
+        const nextItems = allReceived.slice(renderedCount, renderedCount + BATCH_SIZE);
+        if (nextItems.length === 0) return;
+        container.insertAdjacentHTML("beforeend", nextItems.map(renderProductHTML).join(""));
+        renderedCount += nextItems.length;
+      }
+    });
+
     source.onerror = function() {
       source.close();
       onComplete();
