@@ -1,7 +1,7 @@
-// spinner.js — listens for spinnerChange and renders offers overlay
+// offers.js — listens for spinnerChange and renders offers overlay
 
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("⚙️ spinner.js loaded — enhanced with Offers overlay feature");
+  console.log("⚙️ offers.js loaded — enhanced with Offers overlay feature");
 
   document.addEventListener("spinnerChange", async (event) => {
     const { visible } = event.detail || {};
@@ -20,17 +20,27 @@ document.addEventListener("DOMContentLoaded", () => {
 /* ---------------- POST to /notify_scheduler ---------------- */
 async function triggerOfferScheduler() {
   try {
+    // ✅ Use last search query dynamically
+    const lastQuery =
+      window.currentSearchQuery ||
+      localStorage.getItem("lastSearchQuery") ||
+      "default";
+
     const payload = {
       title: "Offers",
-      message: "shoes",
+      message: lastQuery, // ← dynamic query here
       loops: 0,
       seconds: 0
     };
+
+    console.log("📨 Sending payload to scheduler:", payload);
+
     const res = await fetch("/notify_scheduler", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
+
     console.log("📡 Scheduler response:", await res.text());
   } catch (err) {
     console.error("❌ Scheduler request failed:", err);
