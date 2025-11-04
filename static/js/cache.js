@@ -1,11 +1,10 @@
-// cache-watcher.js — single persistent popup showing current store
+// cache-watcher.js — uses built-in popup system from index.html
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("⚙️ cache-watcher.js loaded — single popup store tracker active");
+  console.log("⚙️ cache-watcher.js loaded — single popup using global system");
 
   let lastShownSource = null;
-  let popupEl = null;
+  let popupId = null; // track the single popup instance
 
-  // 🧩 Get the latest store/source name from cache
   function getLastProductSource() {
     try {
       const saved = JSON.parse(localStorage.getItem("lastSearchResults") || "[]");
@@ -17,71 +16,37 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // 🧩 Create or update the persistent popup
   function updatePopup(message) {
-    // Use global showDebugPopup if available AND it supports live updates
-    if (typeof showDebugPopup === "function" && !window.forceLocalPopup) {
-      // Instead of spawning new popups, we reuse one DOM element
-      if (!popupEl) {
-        popupEl = document.createElement("div");
-        popupEl.id = "cacheWatcherPopup";
-        Object.assign(popupEl.style, {
-          position: "fixed",
-          bottom: "24px",
-          right: "24px",
-          background: "#333",
-          color: "#fff",
-          padding: "10px 16px",
-          borderRadius: "8px",
-          fontSize: "14px",
-          zIndex: 9999,
-          boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
-          transition: "opacity 0.3s ease",
-          opacity: "0.95"
-        });
-        document.body.appendChild(popupEl);
+    // Reuse the existing popup by its id
+    if (typeof addPopup === "function") {
+      // If popupId is active, update it; otherwise create new
+      if (popupId && window.activePopups && window.activePopups[popupId]) {
+        window.activePopups[popupId].querySelector(".popup-text").textContent = message;
+      } else {
+        popupId = addPopup(message);
       }
-      popupEl.textContent = message;
+    } else if (typeof showDebugPopup === "function") {
+      showDebugPopup(message);
     } else {
-      // Fallback if showDebugPopup not available
-      if (!popupEl) {
-        popupEl = document.createElement("div");
-        popupEl.id = "cacheWatcherPopup";
-        Object.assign(popupEl.style, {
-          position: "fixed",
-          bottom: "24px",
-          right: "24px",
-          background: "#333",
-          color: "#fff",
-          padding: "10px 16px",
-          borderRadius: "8px",
-          fontSize: "14px",
-          zIndex: 9999,
-          boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
-          transition: "opacity 0.3s ease",
-          opacity: "0.95"
-        });
-        document.body.appendChild(popupEl);
-      }
-      popupEl.textContent = message;
+      console.log("💬 Popup:", message);
     }
   }
 
-  // 🧩 Remove popup when done
   function removePopup() {
-    if (popupEl) {
-      popupEl.remove();
-      popupEl = null;
+    if (popupId && window.activePopups && window.activePopups[popupId]) {
+      const el = window.activePopups[popupId];
+      el.remove();
+      delete window.activePopups[popupId];
+      popupId = null;
     }
   }
 
-  // 🔄 Watch spinnerChange events
   document.addEventListener("spinnerChange", (event) => {
     const { visible } = event.detail || {};
     console.log(`🔄 spinnerChange → visible: ${visible}`);
 
     if (visible) {
-      // Prevent multiple intervals
+      // stop duplicates
       if (window.cacheWatcherInterval) clearInterval(window.cacheWatcherInterval);
 
       updatePopup("🌀 Searching stores...");
@@ -93,7 +58,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }, 500);
     } else {
-      // Stop polling
+      // stop polling
       if (window.cacheWatcherInterval) {
         clearInterval(window.cacheWatcherInterval);
         window.cacheWatcherInterval = null;
@@ -103,7 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (source) updatePopup(`✅ Finished searching ${source}`);
       else updatePopup("✅ Search complete.");
 
-      // Fade out popup a few seconds later
+      // remove popup after short delay
       setTimeout(removePopup, 3000);
       lastShownSource = null;
     }
