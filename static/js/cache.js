@@ -1,9 +1,10 @@
-// cache-watcher.js — uses built-in popup system from index.html
+// cache-watcher.js — persistent popup showing current store
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("⚙️ cache-watcher.js loaded — single popup using global system");
+  console.log("⚙️ cache-watcher.js loaded — persistent store tracker active");
 
   let lastShownSource = null;
-  let popupId = null; // track the single popup instance
+  let persistentPopup = null;
+  let interval = null;
 
   function getLastProductSource() {
     try {
@@ -16,29 +17,24 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function updatePopup(message) {
-    // Reuse the existing popup by its id
-    if (typeof addPopup === "function") {
-      // If popupId is active, update it; otherwise create new
-      if (popupId && window.activePopups && window.activePopups[popupId]) {
-        window.activePopups[popupId].querySelector(".popup-text").textContent = message;
-      } else {
-        popupId = addPopup(message);
-      }
-    } else if (typeof showDebugPopup === "function") {
-      showDebugPopup(message);
-    } else {
-      console.log("💬 Popup:", message);
+  function showPersistentPopup(message) {
+    const container = document.getElementById("popupContainer");
+    if (!container) return;
+
+    // Create only once
+    if (!persistentPopup) {
+      persistentPopup = document.createElement("div");
+      persistentPopup.className = "popupMessage cacheWatcherPopup";
+      container.appendChild(persistentPopup);
     }
+    persistentPopup.textContent = message;
   }
 
-  function removePopup() {
-    if (popupId && window.activePopups && window.activePopups[popupId]) {
-      const el = window.activePopups[popupId];
-      el.remove();
-      delete window.activePopups[popupId];
-      popupId = null;
+  function removePersistentPopup() {
+    if (persistentPopup && persistentPopup.parentNode) {
+      persistentPopup.remove();
     }
+    persistentPopup = null;
   }
 
   document.addEventListener("spinnerChange", (event) => {
@@ -46,30 +42,30 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log(`🔄 spinnerChange → visible: ${visible}`);
 
     if (visible) {
-      // stop duplicates
-      if (window.cacheWatcherInterval) clearInterval(window.cacheWatcherInterval);
+      if (interval) clearInterval(interval);
+      showPersistentPopup("🌀 Searching stores...");
 
-      updatePopup("🌀 Searching stores...");
-      window.cacheWatcherInterval = setInterval(() => {
+      interval = setInterval(() => {
         const source = getLastProductSource();
         if (source && source !== lastShownSource) {
           lastShownSource = source;
-          updatePopup(`🌀 Searching ${source}...`);
+          showPersistentPopup(`🌀 Searching ${source}...`);
         }
       }, 500);
     } else {
-      // stop polling
-      if (window.cacheWatcherInterval) {
-        clearInterval(window.cacheWatcherInterval);
-        window.cacheWatcherInterval = null;
+      if (interval) {
+        clearInterval(interval);
+        interval = null;
       }
 
       const source = getLastProductSource();
-      if (source) updatePopup(`✅ Finished searching ${source}`);
-      else updatePopup("✅ Search complete.");
+      if (source) {
+        showPersistentPopup(`✅ Finished searching ${source}`);
+      } else {
+        showPersistentPopup("✅ Search complete.");
+      }
 
-      // remove popup after short delay
-      setTimeout(removePopup, 3000);
+      setTimeout(removePersistentPopup, 2500);
       lastShownSource = null;
     }
   });
