@@ -1,9 +1,11 @@
-// cache-watcher.js — listens for spinnerChange and reports active store
+// cache-watcher.js — single persistent popup showing current store
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("⚙️ cache-watcher.js loaded — live store tracker active");
+  console.log("⚙️ cache-watcher.js loaded — single popup store tracker active");
 
   let lastShownSource = null;
+  let popupEl = null;
 
+  // 🧩 Get the latest store/source name from cache
   function getLastProductSource() {
     try {
       const saved = JSON.parse(localStorage.getItem("lastSearchResults") || "[]");
@@ -15,55 +17,94 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function showCachePopup(message) {
-    if (typeof showDebugPopup === "function") {
-      showDebugPopup(message);
+  // 🧩 Create or update the persistent popup
+  function updatePopup(message) {
+    // Use global showDebugPopup if available AND it supports live updates
+    if (typeof showDebugPopup === "function" && !window.forceLocalPopup) {
+      // Instead of spawning new popups, we reuse one DOM element
+      if (!popupEl) {
+        popupEl = document.createElement("div");
+        popupEl.id = "cacheWatcherPopup";
+        Object.assign(popupEl.style, {
+          position: "fixed",
+          bottom: "24px",
+          right: "24px",
+          background: "#333",
+          color: "#fff",
+          padding: "10px 16px",
+          borderRadius: "8px",
+          fontSize: "14px",
+          zIndex: 9999,
+          boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
+          transition: "opacity 0.3s ease",
+          opacity: "0.95"
+        });
+        document.body.appendChild(popupEl);
+      }
+      popupEl.textContent = message;
     } else {
-      const popup = document.createElement("div");
-      popup.textContent = message;
-      Object.assign(popup.style, {
-        position: "fixed",
-        bottom: "24px",
-        right: "24px",
-        background: "#333",
-        color: "#fff",
-        padding: "10px 16px",
-        borderRadius: "8px",
-        fontSize: "14px",
-        zIndex: 9999,
-        boxShadow: "0 4px 8px rgba(0,0,0,0.2)"
-      });
-      document.body.appendChild(popup);
-      setTimeout(() => popup.remove(), 1000);
+      // Fallback if showDebugPopup not available
+      if (!popupEl) {
+        popupEl = document.createElement("div");
+        popupEl.id = "cacheWatcherPopup";
+        Object.assign(popupEl.style, {
+          position: "fixed",
+          bottom: "24px",
+          right: "24px",
+          background: "#333",
+          color: "#fff",
+          padding: "10px 16px",
+          borderRadius: "8px",
+          fontSize: "14px",
+          zIndex: 9999,
+          boxShadow: "0 4px 8px rgba(0,0,0,0.2)",
+          transition: "opacity 0.3s ease",
+          opacity: "0.95"
+        });
+        document.body.appendChild(popupEl);
+      }
+      popupEl.textContent = message;
     }
   }
 
+  // 🧩 Remove popup when done
+  function removePopup() {
+    if (popupEl) {
+      popupEl.remove();
+      popupEl = null;
+    }
+  }
+
+  // 🔄 Watch spinnerChange events
   document.addEventListener("spinnerChange", (event) => {
     const { visible } = event.detail || {};
     console.log(`🔄 spinnerChange → visible: ${visible}`);
 
     if (visible) {
-      // 🧹 Prevent multiple intervals
+      // Prevent multiple intervals
       if (window.cacheWatcherInterval) clearInterval(window.cacheWatcherInterval);
 
-      showCachePopup("🌀 Searching stores...");
+      updatePopup("🌀 Searching stores...");
       window.cacheWatcherInterval = setInterval(() => {
         const source = getLastProductSource();
         if (source && source !== lastShownSource) {
           lastShownSource = source;
-          showCachePopup(`🌀 Searching ${source}...`);
+          updatePopup(`🌀 Searching ${source}...`);
         }
       }, 500);
     } else {
-      // Stop polling when spinner off
+      // Stop polling
       if (window.cacheWatcherInterval) {
         clearInterval(window.cacheWatcherInterval);
         window.cacheWatcherInterval = null;
       }
 
       const source = getLastProductSource();
-      if (source) showCachePopup(`✅ Finished searching ${source}`);
-      else showCachePopup("✅ Search complete.");
+      if (source) updatePopup(`✅ Finished searching ${source}`);
+      else updatePopup("✅ Search complete.");
+
+      // Fade out popup a few seconds later
+      setTimeout(removePopup, 3000);
       lastShownSource = null;
     }
   });
