@@ -1,0 +1,50 @@
+// 🔹 spinner-listener.js
+(function () {
+  // Helper: read cached products from localStorage
+  function getCachedProductsCount() {
+    try {
+      const saved = JSON.parse(localStorage.getItem("lastSearchResults") || "[]");
+      return Array.isArray(saved) ? saved.length : 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  // Helper: show popup message (matches your existing addPopup style)
+  function showCachePopup(count) {
+    const container = document.getElementById("popupContainer");
+    if (!container) return;
+
+    const existing = container.querySelector(".popupMessage.cache");
+    if (existing) existing.remove(); // remove old popup to avoid stacking
+
+    const div = document.createElement("div");
+    div.className = "popupMessage cache";
+    div.textContent = `${count} product${count !== 1 ? "s" : ""} in cache`;
+    container.appendChild(div);
+
+    // auto-remove after a few seconds
+    setTimeout(() => div.remove(), 2000);
+  }
+
+  // Listen for spinner changes globally
+  document.addEventListener("spinnerChange", (e) => {
+    const { visible } = e.detail;
+
+    if (visible) {
+      // Spinner just turned ON → start polling cache count every 2 seconds
+      if (!window.cacheWatcher) {
+        window.cacheWatcher = setInterval(() => {
+          const count = getCachedProductsCount();
+          if (count > 0) showCachePopup(count);
+        }, 2000);
+      }
+    } else {
+      // Spinner turned OFF → stop polling
+      if (window.cacheWatcher) {
+        clearInterval(window.cacheWatcher);
+        window.cacheWatcher = null;
+      }
+    }
+  });
+})();
