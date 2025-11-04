@@ -51,7 +51,7 @@ document.addEventListener("DOMContentLoaded", () => {
         window.cacheWatcherInterval = setInterval(() => {
           const source = getLastProductSource();
           if (source) showCachePopup(`🌀 Searching ${source}...`);
-        }, 2500);
+        }, 500);
       }
     } else {
       // Spinner OFF → stop polling
