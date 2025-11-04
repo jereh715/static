@@ -2,12 +2,12 @@
 document.addEventListener("DOMContentLoaded", () => {
   console.log("⚙️ cache-watcher.js loaded — live store tracker active");
 
-  // Helper: safely get last product and its store name
+  let lastShownSource = null;
+
   function getLastProductSource() {
     try {
       const saved = JSON.parse(localStorage.getItem("lastSearchResults") || "[]");
       if (!Array.isArray(saved) || saved.length === 0) return null;
-
       const last = saved[saved.length - 1];
       return last.source || last.store || "Unknown Store";
     } catch {
@@ -15,7 +15,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Helper: popup message (uses global showDebugPopup if available)
   function showCachePopup(message) {
     if (typeof showDebugPopup === "function") {
       showDebugPopup(message);
@@ -35,35 +34,37 @@ document.addEventListener("DOMContentLoaded", () => {
         boxShadow: "0 4px 8px rgba(0,0,0,0.2)"
       });
       document.body.appendChild(popup);
-      setTimeout(() => popup.remove(), 2000);
+      setTimeout(() => popup.remove(), 1000);
     }
   }
 
-  // Listen to the global spinnerChange event
   document.addEventListener("spinnerChange", (event) => {
     const { visible } = event.detail || {};
     console.log(`🔄 spinnerChange → visible: ${visible}`);
 
     if (visible) {
-      // Spinner ON → start polling cache
+      // 🧹 Prevent multiple intervals
+      if (window.cacheWatcherInterval) clearInterval(window.cacheWatcherInterval);
+
       showCachePopup("🌀 Searching stores...");
-      if (!window.cacheWatcherInterval) {
-        window.cacheWatcherInterval = setInterval(() => {
-          const source = getLastProductSource();
-          if (source) showCachePopup(`🌀 Searching ${source}...`);
-        }, 500);
-      }
+      window.cacheWatcherInterval = setInterval(() => {
+        const source = getLastProductSource();
+        if (source && source !== lastShownSource) {
+          lastShownSource = source;
+          showCachePopup(`🌀 Searching ${source}...`);
+        }
+      }, 500);
     } else {
-      // Spinner OFF → stop polling
-      clearInterval(window.cacheWatcherInterval);
-      window.cacheWatcherInterval = null;
+      // Stop polling when spinner off
+      if (window.cacheWatcherInterval) {
+        clearInterval(window.cacheWatcherInterval);
+        window.cacheWatcherInterval = null;
+      }
 
       const source = getLastProductSource();
-      if (source) {
-        showCachePopup(`✅ Finished searching ${source}`);
-      } else {
-        showCachePopup("✅ Search complete.");
-      }
+      if (source) showCachePopup(`✅ Finished searching ${source}`);
+      else showCachePopup("✅ Search complete.");
+      lastShownSource = null;
     }
   });
 });
