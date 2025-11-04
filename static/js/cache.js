@@ -1,25 +1,27 @@
-// cache-watcher.js — listens for spinnerChange and reports cache size
+// cache-watcher.js — listens for spinnerChange and reports active store
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("⚙️ cache-watcher.js loaded — live cache counter active");
+  console.log("⚙️ cache-watcher.js loaded — live store tracker active");
 
-  // Helper: safely get count of cached products
-  function getCachedProductsCount() {
+  // Helper: safely get last product and its store name
+  function getLastProductSource() {
     try {
       const saved = JSON.parse(localStorage.getItem("lastSearchResults") || "[]");
-      return Array.isArray(saved) ? saved.length : 0;
+      if (!Array.isArray(saved) || saved.length === 0) return null;
+
+      const last = saved[saved.length - 1];
+      return last.source || last.store || "Unknown Store";
     } catch {
-      return 0;
+      return null;
     }
   }
 
   // Helper: popup message (uses global showDebugPopup if available)
-  function showCachePopup(count) {
-    const msg = `${count} product${count !== 1 ? "s" : ""} in cache`;
+  function showCachePopup(message) {
     if (typeof showDebugPopup === "function") {
-      showDebugPopup(msg);
+      showDebugPopup(message);
     } else {
       const popup = document.createElement("div");
-      popup.textContent = msg;
+      popup.textContent = message;
       Object.assign(popup.style, {
         position: "fixed",
         bottom: "24px",
@@ -44,23 +46,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (visible) {
       // Spinner ON → start polling cache
-      showCachePopup("🌀 Building cache...");
+      showCachePopup("🌀 Searching stores...");
       if (!window.cacheWatcherInterval) {
         window.cacheWatcherInterval = setInterval(() => {
-          const count = getCachedProductsCount();
-          if (count > 0) showCachePopup(count);
-        }, 2000);
+          const source = getLastProductSource();
+          if (source) showCachePopup(`🌀 Searching ${source}...`);
+        }, 2500);
       }
     } else {
       // Spinner OFF → stop polling
       clearInterval(window.cacheWatcherInterval);
       window.cacheWatcherInterval = null;
 
-      const finalCount = getCachedProductsCount();
-      if (finalCount > 0) {
-        showCachePopup(`✅ ${finalCount} products cached`);
+      const source = getLastProductSource();
+      if (source) {
+        showCachePopup(`✅ Finished searching ${source}`);
       } else {
-        showCachePopup("⚠️ No cached products");
+        showCachePopup("✅ Search complete.");
       }
     }
   });
