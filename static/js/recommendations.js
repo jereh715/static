@@ -29,46 +29,41 @@ document.addEventListener("DOMContentLoaded", () => {
   overlay.appendChild(content);
   document.body.appendChild(overlay);
 
-  let fetchInterval;
+  let debounceTimer;
+  let hideTimer;
 
   input.addEventListener("input", (e) => {
-    const text = e.target.value.trim();
+    clearTimeout(debounceTimer);
+    clearTimeout(hideTimer);
 
-    if (text.length <= 3) {
+    const text = e.target.value.trim();
+    if (text === "") {
       overlay.style.display = "none";
-      clearInterval(fetchInterval);
       return;
     }
 
-    overlay.style.display = "block"; // show overlay while typing
+    // Show popup like before
+    addPopup(`📝 ${text}`);
 
-    // Start polling every 400ms if not already started
-    if (!fetchInterval) {
-      fetchInterval = setInterval(() => {
-        const query = input.value.trim();
-        if (query.length <= 3) {
-          overlay.style.display = "none";
-          clearInterval(fetchInterval);
-          fetchInterval = null;
-          return;
-        }
-
-        fetch(`/api/synonyms?q=${encodeURIComponent(query)}`)
+    // Only fetch when >3 characters
+    if (text.length > 3) {
+      debounceTimer = setTimeout(() => {
+        fetch(`/api/synonyms?q=${encodeURIComponent(text)}`)
           .then(res => res.json())
           .then(data => {
             content.textContent = JSON.stringify(data, null, 2);
+            overlay.style.display = "block";
           })
           .catch(err => {
             content.textContent = `❌ Error: ${err}`;
+            overlay.style.display = "block";
           });
-      }, 400); // poll every 400ms
+      }, 400);
     }
-  });
 
-  // Stop polling if user blurs input
-  input.addEventListener("blur", () => {
-    overlay.style.display = "none";
-    clearInterval(fetchInterval);
-    fetchInterval = null;
+    // Hide overlay a bit after user stops typing
+    hideTimer = setTimeout(() => {
+      overlay.style.display = "none";
+    }, 1200);
   });
 });
