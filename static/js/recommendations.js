@@ -42,9 +42,6 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // Show popup like before
-    addPopup(`📝 ${text}`);
-
     // Only fetch when >3 characters
     if (text.length > 3) {
       debounceTimer = setTimeout(() => {
@@ -58,7 +55,7 @@ document.addEventListener("DOMContentLoaded", () => {
             content.textContent = `❌ Error: ${err}`;
             overlay.style.display = "block";
           });
-      }, 400);
+      }, 50);
     }
 
     // Hide overlay a bit after user stops typing
