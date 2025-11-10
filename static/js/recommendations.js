@@ -18,7 +18,8 @@ document.addEventListener("DOMContentLoaded", () => {
     overflowY: "auto",
     padding: "20px",
     zIndex: "9999",
-    display: "none"
+    display: "none",
+    transition: "opacity 0.2s ease"
   });
 
   const content = document.createElement("div");
@@ -35,77 +36,82 @@ document.addEventListener("DOMContentLoaded", () => {
   let hideTimer;
   let lastQuery = "";
 
-  // === Event listener ===
-  input.addEventListener("input", (e) => {
-    const text = e.target.value.trim();
+  // === Helper to render synonyms ===
+  function renderSuggestions(synonyms) {
+    content.innerHTML = ""; // clear old content
 
-    // Immediately hide overlay & cancel pending requests if empty
-    if (text === "") {
-      overlay.style.display = "none";
-      clearTimeout(debounceTimer);
-      clearTimeout(hideTimer);
-      lastQuery = "";
+    if (!synonyms || !synonyms.length) {
+      content.textContent = "No recommendations found.";
       return;
     }
+
+    synonyms.forEach((item) => {
+      const suggestion = document.createElement("div");
+      suggestion.textContent = item;
+      Object.assign(suggestion.style, {
+        padding: "10px 14px",
+        borderRadius: "8px",
+        background: "#f8f8f8",
+        cursor: "pointer",
+        transition: "background 0.2s"
+      });
+      suggestion.addEventListener("mouseover", () => {
+        suggestion.style.background = "#e6e6e6";
+      });
+      suggestion.addEventListener("mouseout", () => {
+        suggestion.style.background = "#f8f8f8";
+      });
+      suggestion.addEventListener("click", () => {
+        input.value = item;
+        input.focus();
+      });
+      content.appendChild(suggestion);
+    });
+  }
+
+  // === Input listener ===
+  input.addEventListener("input", (e) => {
+    const text = e.target.value.trim();
 
     clearTimeout(debounceTimer);
     clearTimeout(hideTimer);
 
-    // Only fetch if input changed (≥ 1 character)
+    // If empty: hide overlay
+    if (text === "") {
+      overlay.style.display = "none";
+      lastQuery = "";
+      return;
+    }
+
+    // Ensure overlay stays visible while typing
+    overlay.style.display = "block";
+    overlay.style.opacity = "1";
+
+    // Fetch only when text changes
     if (text !== lastQuery) {
       debounceTimer = setTimeout(() => {
         const currentText = input.value.trim();
         if (currentText === "") return;
-
         lastQuery = currentText;
 
         fetch(`/api/synonyms?q=${encodeURIComponent(currentText)}`)
           .then(res => res.json())
           .then(data => {
-            if (!data.synonyms || !data.synonyms.length) {
-              overlay.style.display = "none";
-              return;
-            }
-
-            // Clear old content
-            content.innerHTML = "";
-
-            // Create clickable suggestion items
-            data.synonyms.forEach((item) => {
-              const suggestion = document.createElement("div");
-              suggestion.textContent = item;
-              Object.assign(suggestion.style, {
-                padding: "10px 14px",
-                borderRadius: "8px",
-                background: "#f8f8f8",
-                cursor: "pointer",
-                transition: "background 0.2s"
-              });
-              suggestion.addEventListener("mouseover", () => {
-                suggestion.style.background = "#e6e6e6";
-              });
-              suggestion.addEventListener("mouseout", () => {
-                suggestion.style.background = "#f8f8f8";
-              });
-              suggestion.addEventListener("click", () => {
-                input.value = item;
-                overlay.style.display = "none";
-              });
-              content.appendChild(suggestion);
-            });
-
-            overlay.style.display = "block";
+            if (data && data.synonyms) renderSuggestions(data.synonyms);
+            else renderSuggestions([]);
           })
           .catch(err => {
             content.textContent = `❌ Error: ${err}`;
-            overlay.style.display = "block";
           });
       }, 400);
     }
 
-    // Hide overlay 1.2s after typing stops
+    // Auto-hide after 2s of inactivity
     hideTimer = setTimeout(() => {
-      overlay.style.display = "none";
-    }, 1200);
+      overlay.style.opacity = "0";
+      setTimeout(() => {
+        overlay.style.display = "none";
+      }, 200);
+    }, 2000);
   });
 });
