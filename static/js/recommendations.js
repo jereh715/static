@@ -31,12 +31,10 @@ document.addEventListener("DOMContentLoaded", () => {
   overlay.appendChild(content);
   document.body.appendChild(overlay);
 
-  // === Variables ===
   let debounceTimer;
-  let hideTimer;
   let lastQuery = "";
 
-  // === Helper to render synonyms ===
+  // === Helper to render suggestions ===
   function renderSuggestions(synonyms) {
     content.innerHTML = ""; // clear old content
 
@@ -72,22 +70,17 @@ document.addEventListener("DOMContentLoaded", () => {
   // === Input listener ===
   input.addEventListener("input", (e) => {
     const text = e.target.value.trim();
-
     clearTimeout(debounceTimer);
-    clearTimeout(hideTimer);
 
-    // If empty: hide overlay
     if (text === "") {
       overlay.style.display = "none";
       lastQuery = "";
       return;
     }
 
-    // Ensure overlay stays visible while typing
     overlay.style.display = "block";
     overlay.style.opacity = "1";
 
-    // Fetch only when text changes
     if (text !== lastQuery) {
       debounceTimer = setTimeout(() => {
         const currentText = input.value.trim();
@@ -105,13 +98,15 @@ document.addEventListener("DOMContentLoaded", () => {
           });
       }, 400);
     }
+  });
 
-    // Auto-hide after 2s of inactivity
-    hideTimer = setTimeout(() => {
+  // === Hide overlay when clicking outside input/overlay ===
+  document.addEventListener("click", (e) => {
+    if (!overlay.contains(e.target) && e.target !== input) {
       overlay.style.opacity = "0";
       setTimeout(() => {
         overlay.style.display = "none";
       }, 200);
-    }, 2000);
+    }
   });
 });
