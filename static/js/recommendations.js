@@ -51,11 +51,11 @@ document.addEventListener("DOMContentLoaded", () => {
     clearTimeout(debounceTimer);
     clearTimeout(hideTimer);
 
-    // Only fetch if >3 characters and input changed
-    if (text.length > 1 && text !== lastQuery) {
+    // Only fetch if input changed (≥ 1 character)
+    if (text !== lastQuery) {
       debounceTimer = setTimeout(() => {
         const currentText = input.value.trim();
-        if (currentText.length <= 3) return;
+        if (currentText === "") return;
 
         lastQuery = currentText;
 
