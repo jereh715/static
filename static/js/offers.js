@@ -26,8 +26,8 @@ async function triggerOfferScheduler() {
     const payload = {
       title: "Offers",
       message: lastQuery,
-      loops: 0,
-      seconds: 0
+      loops: 2,
+      seconds: 7200
     };
 
     console.log("📨 Sending payload to scheduler:", payload);
