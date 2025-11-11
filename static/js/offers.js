@@ -66,23 +66,39 @@ function createOffersButton() {
 
   const btn = document.createElement("button");
   btn.id = "offersButton";
-  btn.textContent = "💰 Offers";
   Object.assign(btn.style, {
     position: "fixed",
     bottom: "24px",
     right: "24px",
-    background: "#0b76ef",
-    color: "#fff",
-    fontWeight: "600",
+    background: "none",
     border: "none",
-    borderRadius: "50px",
-    padding: "12px 20px",
-    fontSize: "16px",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+    padding: "0",
     cursor: "pointer",
-    zIndex: 9999
+    zIndex: 9999,
   });
 
+  const img = document.createElement("img");
+  img.src = "/static_updated/js/discount.png";
+  img.alt = "Offers";
+  Object.assign(img.style, {
+    width: "64px",
+    height: "64px",
+    borderRadius: "50%",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
+    transition: "transform 0.2s ease, box-shadow 0.2s ease",
+  });
+
+  img.addEventListener("mouseenter", () => {
+    img.style.transform = "scale(1.1)";
+    img.style.boxShadow = "0 6px 18px rgba(11, 118, 239, 0.5)";
+  });
+
+  img.addEventListener("mouseleave", () => {
+    img.style.transform = "scale(1)";
+    img.style.boxShadow = "0 4px 12px rgba(0,0,0,0.25)";
+  });
+
+  btn.appendChild(img);
   btn.addEventListener("click", showOffersOverlay);
   document.body.appendChild(btn);
 }
@@ -103,7 +119,7 @@ function showOffersOverlay() {
     color: "#fff",
     overflowY: "auto",
     zIndex: 10000,
-    padding: "40px 20px"
+    padding: "40px 20px",
   });
 
   const closeBtn = document.createElement("span");
@@ -113,7 +129,7 @@ function showOffersOverlay() {
     top: "20px",
     right: "30px",
     fontSize: "36px",
-    cursor: "pointer"
+    cursor: "pointer",
   });
   closeBtn.onclick = () => overlay.remove();
 
@@ -128,7 +144,7 @@ function showOffersOverlay() {
     gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
     gap: "16px",
     maxWidth: "1000px",
-    margin: "0 auto"
+    margin: "0 auto",
   });
 
   const offersData = window.offersCache || {};
@@ -146,7 +162,7 @@ function showOffersOverlay() {
         color: "#111",
         borderRadius: "12px",
         padding: "10px",
-        boxShadow: "0 2px 6px rgba(0,0,0,0.3)"
+        boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
       });
       card.innerHTML = `
         <img src="${prod.image}" alt="${prod.title}" style="width:100%;border-radius:8px;">
