@@ -1,17 +1,15 @@
 // offers.js — listens for spinnerChange and renders offers overlay
 
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("⚙️ offers.js loaded — enhanced with Offers overlay feature");
+  console.log("⚙️ offers.js loaded — Offers overlay only (no popups)");
 
   document.addEventListener("spinnerChange", async (event) => {
     const { visible } = event.detail || {};
     console.log(`🔄 spinnerChange → visible: ${visible}`);
 
     if (visible) {
-      showDebugPopup("🌀 Searching for offers...");
       await triggerOfferScheduler();
     } else {
-      showDebugPopup("✅ Search complete. Fetching offers soon...");
       setTimeout(fetchAndPrepareOffers, 5000);
     }
   });
@@ -20,7 +18,6 @@ document.addEventListener("DOMContentLoaded", () => {
 /* ---------------- POST to /notify_scheduler ---------------- */
 async function triggerOfferScheduler() {
   try {
-    // ✅ Use last search query dynamically
     const lastQuery =
       window.currentSearchQuery ||
       localStorage.getItem("lastSearchQuery") ||
@@ -28,7 +25,7 @@ async function triggerOfferScheduler() {
 
     const payload = {
       title: "Offers",
-      message: lastQuery, // ← dynamic query here
+      message: lastQuery,
       loops: 0,
       seconds: 0
     };
@@ -54,22 +51,18 @@ async function fetchAndPrepareOffers() {
     const data = await res.json();
     console.log("📦 Offers JSON:", data);
 
-    if (!Array.isArray(data) || !data[0]) {
-      showDebugPopup("⚠️ No offers found.");
-      return;
-    }
+    if (!Array.isArray(data) || !data[0]) return;
 
-    window.offersCache = data[0]; // store globally
+    window.offersCache = data[0];
     createOffersButton();
   } catch (err) {
     console.error("❌ Failed to fetch offers JSON:", err);
-    showDebugPopup("⚠️ Failed to load offers data.");
   }
 }
 
 /* ---------------- CREATE FLOATING BUTTON ---------------- */
 function createOffersButton() {
-  if (document.getElementById("offersButton")) return; // already exists
+  if (document.getElementById("offersButton")) return;
 
   const btn = document.createElement("button");
   btn.id = "offersButton";
@@ -92,7 +85,6 @@ function createOffersButton() {
 
   btn.addEventListener("click", showOffersOverlay);
   document.body.appendChild(btn);
-  showDebugPopup("💰 Offers ready — click to view!");
 }
 
 /* ---------------- CREATE OFFERS OVERLAY ---------------- */
@@ -168,28 +160,4 @@ function showOffersOverlay() {
 
   overlay.append(closeBtn, header, container);
   document.body.appendChild(overlay);
-}
-
-/* ---------------- POPUP FALLBACK ---------------- */
-function showDebugPopup(message) {
-  if (typeof addPopup === "function") {
-    addPopup(message);
-  } else {
-    const popup = document.createElement("div");
-    popup.textContent = message;
-    Object.assign(popup.style, {
-      position: "fixed",
-      bottom: "20px",
-      right: "20px",
-      background: "#333",
-      color: "#fff",
-      padding: "10px 16px",
-      borderRadius: "8px",
-      fontSize: "14px",
-      zIndex: 9999,
-      boxShadow: "0 4px 8px rgba(0,0,0,0.2)"
-    });
-    document.body.appendChild(popup);
-    setTimeout(() => popup.remove(), 2500);
-  }
 }
