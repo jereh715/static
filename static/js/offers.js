@@ -81,8 +81,8 @@ function createOffersButton() {
   img.src = "/static_updated/js/discount.png";
   img.alt = "Offers";
   Object.assign(img.style, {
-    width: "64px",
-    height: "64px",
+    width: "48px",
+    height: "48px",
     borderRadius: "50%",
     boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
     transition: "transform 0.2s ease, box-shadow 0.2s ease",
