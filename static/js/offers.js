@@ -51,13 +51,46 @@ async function fetchAndPrepareOffers() {
     const data = await res.json();
     console.log("📦 Offers JSON:", data);
 
-    if (!Array.isArray(data) || !data[0]) return;
+    if (!Array.isArray(data) || !data[0]) {
+      console.warn("⚠️ No offers found in JSON. Skipping button creation.");
+      return;
+    }
 
     window.offersCache = data[0];
     createOffersButton();
+
+    // Start polling in case button creation happens too early
+    pollOffersButton(5, 5000);
   } catch (err) {
     console.error("❌ Failed to fetch offers JSON:", err);
   }
+}
+
+/* ---------------- POLLING: RETRY OFFERS BUTTON CREATION ---------------- */
+function pollOffersButton(retries = 5, interval = 5000) {
+  let attempts = 0;
+
+  const poller = setInterval(() => {
+    attempts++;
+    const btnExists = !!document.getElementById("offersButton");
+    const hasData = !!(window.offersCache && Object.keys(window.offersCache).length);
+
+    if (btnExists) {
+      console.log("✅ Offers button already present. Polling stopped.");
+      clearInterval(poller);
+      return;
+    }
+
+    if (hasData) {
+      console.log(`🔁 Poll attempt ${attempts} → trying to create button again`);
+      createOffersButton();
+    }
+
+    if (attempts >= retries) {
+      console.warn("⏹️ Max polling attempts reached. Stopping retries.");
+      clearInterval(poller);
+    }
+  }, interval);
 }
 
 /* ---------------- CREATE FLOATING BUTTON ---------------- */
@@ -84,6 +117,7 @@ function createOffersButton() {
     width: "48px",
     height: "48px",
     borderRadius: "50%",
+    objectFit: "contain",
     boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
     transition: "transform 0.2s ease, box-shadow 0.2s ease",
   });
@@ -101,6 +135,8 @@ function createOffersButton() {
   btn.appendChild(img);
   btn.addEventListener("click", showOffersOverlay);
   document.body.appendChild(btn);
+
+  console.log("💰 Offers button created.");
 }
 
 /* ---------------- CREATE OFFERS OVERLAY ---------------- */
