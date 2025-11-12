@@ -83,7 +83,7 @@
         toggle.addEventListener("change", async (e) => {
           if (e.target.checked) {
             try {
-              const res = await fetch("http://127.0.0.1:5000/api/notify", {
+              const res = await fetch("http://127.0.0.1:5000/notify", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
