@@ -40,7 +40,9 @@
   function showStep(step) {
     const content = overlay.querySelector(".step-content");
 
+    // STEP 1: Intro animation
     if (step === 1) {
+      content.classList.add("slider");
       content.innerHTML = `
         <span>welcome</span>
         <span>to</span>
@@ -49,7 +51,13 @@
       nextBtn.textContent = "Next";
     }
 
+    // STEP 2: Notification opt-in
     if (step === 2) {
+      content.classList.remove("slider");
+      content.style.display = "flex";
+      content.style.flexDirection = "column";
+      content.style.justifyContent = "center";
+      content.style.alignItems = "center";
       content.innerHTML = `
         <div style="text-align:center; font-family:'MySans','Quicksand',sans-serif;">
           <p style="font-size:2rem; font-weight:700; margin-bottom:1rem;">
@@ -58,15 +66,18 @@
           <p style="font-size:1.2rem; margin-bottom:1.5rem;">
             you would like to receive notifications
           </p>
-          <label style="display:inline-flex; align-items:center; gap:0.6rem; font-size:1rem;">
-            <input type="checkbox" id="notifyToggle" style="width:20px; height:20px; cursor:pointer;">
+          <label class="toggle-container">
             <span>Enable notifications</span>
+            <div class="toggle-switch">
+              <input type="checkbox" id="notifyToggle">
+              <span class="toggle-slider"></span>
+            </div>
           </label>
         </div>
       `;
       nextBtn.textContent = "Finish";
 
-      // Attach toggle logic
+      // Attach toggle listener
       const toggle = overlay.querySelector("#notifyToggle");
       if (toggle) {
         toggle.addEventListener("change", async (e) => {
@@ -90,6 +101,7 @@
     }
   }
 
+  // --- Hide overlay and show message ---
   function hideWelcome() {
     overlay.remove();
     document.removeEventListener("keydown", onKeydown);
@@ -121,6 +133,7 @@
     }
   }
 
+  // --- Keyboard escape handling ---
   function onKeydown(ev) {
     if (ev.key === "Escape") hideWelcome();
   }
