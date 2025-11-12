@@ -1,5 +1,5 @@
 // cache-watcher.js — persistent popup showing current store
-// this is used to show store progression eg,searching jumia
+// this is used to show store progression eg, searching jumia
 document.addEventListener("DOMContentLoaded", () => {
   console.log("⚙️ cache-watcher.js loaded — persistent store tracker active");
 
@@ -22,13 +22,25 @@ document.addEventListener("DOMContentLoaded", () => {
     const container = document.getElementById("popupContainer");
     if (!container) return;
 
-    // Create only once
+    // Create popup only once
     if (!persistentPopup) {
       persistentPopup = document.createElement("div");
       persistentPopup.className = "popupMessage cacheWatcherPopup";
       container.appendChild(persistentPopup);
     }
-    persistentPopup.textContent = message;
+
+    // Color scheme: "Searching" white, store name orange
+    const searchingMatch = message.match(/(Searching )(.+?)(\.\.\.)/i);
+    if (searchingMatch) {
+      const [, prefix, store, suffix] = searchingMatch;
+      persistentPopup.innerHTML = `
+        <span style="color: white;">${prefix}</span>
+        <span style="color: orange;">${store}</span>
+        <span style="color: white;">${suffix}</span>
+      `;
+    } else {
+      persistentPopup.innerHTML = `<span style="color: white;">${message}</span>`;
+    }
   }
 
   function removePersistentPopup() {
@@ -43,6 +55,7 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log(`🔄 spinnerChange → visible: ${visible}`);
 
     if (visible) {
+      // Start searching popup
       if (interval) clearInterval(interval);
       showPersistentPopup("🌀 Searching stores...");
 
@@ -54,19 +67,13 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }, 500);
     } else {
+      // Stop searching, just remove popup
       if (interval) {
         clearInterval(interval);
         interval = null;
       }
 
-      const source = getLastProductSource();
-      if (source) {
-        showPersistentPopup(`✅ Finished searching ${source}`);
-      } else {
-        showPersistentPopup("✅ Search complete.");
-      }
-
-      setTimeout(removePersistentPopup, 2500);
+      removePersistentPopup();
       lastShownSource = null;
     }
   });
