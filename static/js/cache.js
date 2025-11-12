@@ -29,13 +29,13 @@ document.addEventListener("DOMContentLoaded", () => {
       container.appendChild(persistentPopup);
     }
 
-    // Color scheme: "Searching" white, store name orange
+    // Color scheme: "Searching" white, store name dark orange & bold
     const searchingMatch = message.match(/(Searching )(.+?)(\.\.\.)/i);
     if (searchingMatch) {
       const [, prefix, store, suffix] = searchingMatch;
       persistentPopup.innerHTML = `
         <span style="color: white;">${prefix}</span>
-        <span style="color: orange;">${store}</span>
+        <span style="color: darkorange; font-weight: bold;">${store}</span>
         <span style="color: white;">${suffix}</span>
       `;
     } else {
