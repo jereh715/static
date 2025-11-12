@@ -482,7 +482,7 @@ button.sort-btn {
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between; /* left product left, right product right */
-    gap: 10px;
+    gap: 5px;
     padding-left: 0;
     padding-right: 0;
     margin-top: 120px;
@@ -491,7 +491,7 @@ button.sort-btn {
   .product {
     width: 180px; /* fixed width */
     max-width: 100%;
-    margin-bottom: 10px;
+    margin-bottom: 5px;
     box-sizing: border-box;
   }
 
