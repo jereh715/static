@@ -22,8 +22,8 @@
     #aiOverlay {
       position: fixed;
       top: 0; left: 0;
-      width: 99%;
-      height: 99%;
+      width: 100%;
+      height: 100%;
       background: #fff;
       display: none;
       justify-content: center;
@@ -105,7 +105,7 @@
       line-height: 1.4;
     }
 
-    /* Section title (new addition) */
+    /* Section title */
     #aiOverlay .section-title {
       font-size: 16px;
       font-weight: bold;
@@ -140,11 +140,6 @@
       cursor: pointer;
       scroll-snap-align: start;
       transition: transform 0.25s ease, box-shadow 0.25s ease;
-    }
-    #aiOverlay .similar-item.active {
-      transform: scale(1.08);
-      box-shadow: 0 0 12px 3px rgba(0, 200, 0, 0.35);
-      border-color: #28a745;
     }
     #aiOverlay .similar-item img {
       max-width: 100%;
@@ -213,12 +208,6 @@
     let common = 0;
     tokensA.forEach(t => { if (tokensB.has(t)) common++; });
     return common / Math.max(tokensA.size, tokensB.size);
-  }
-  function getAllowedRange(price) {
-    if (price <= 10000) return { min: price * 0.5, max: price * 1.5 };
-    if (price > 10000 && price <= 40000) return { min: price * 0.7, max: price * 1.3 };
-    if (price > 40000 && price <= 100000) return { min: price * 0.9, max: price * 1.1 };
-    return { min: 0, max: Infinity };
   }
 
   /* ---------------- POPUP ---------------- */
@@ -300,7 +289,7 @@
     // --- Spacer (Gemini AI section) ---
     html += `<div class="spacer-card" id="spacerCard">Generating insights...</div>`;
 
-    // --- Title before similar section (NEW ADDITION) ---
+    // --- Title before similar section ---
     html += `<div class="section-title">Similar Products</div>`;
 
     // --- Similar products logic ---
@@ -315,7 +304,7 @@
     let scored = [];
     if (allProducts.length > 1) {
       const selectedPrice = parsePrice(product.price);
-      const { min, max } = getAllowedRange(selectedPrice);
+      const { min, max } = { min: selectedPrice * 0.8, max: selectedPrice * 1.1 };
 
       scored = allProducts
         .filter(p => p.title !== product.title)
@@ -325,20 +314,8 @@
           priceNum: parsePrice(p.price)
         }))
         .filter(p => p.priceNum >= min && p.priceNum <= max)
-        .sort((a, b) => b.score - a.score);
-
-      // --- NEW: Ensure unique sources ---
-      const seenSources = new Set();
-      const unique = [];
-      for (const p of scored) {
-        const src = (p.source || p.store || "unknown").toLowerCase();
-        if (!seenSources.has(src)) {
-          seenSources.add(src);
-          unique.push(p);
-        }
-        if (unique.length >= 10) break; // max 10 products
-      }
-      scored = unique;
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 10); // max 10 products
 
       if (scored.length) {
         html += `<div class="similar-list">`;
@@ -373,6 +350,7 @@
       el.addEventListener("click", () => sendProductLink(el.dataset.link));
     });
 
+    // Scroll dots update
     const list = body.querySelector(".similar-list");
     if (list) {
       list.addEventListener("scroll", () => {
@@ -386,7 +364,7 @@
             minDist = dist;
             closest = item;
           }
-          item.classList.remove("active");
+          item.classList.remove("active"); // we removed green highlight styling
         });
         if (closest) closest.classList.add("active");
       });
