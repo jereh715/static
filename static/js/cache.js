@@ -1,4 +1,5 @@
 // cache-watcher.js — persistent popup showing current store
+// this is used to show store progression eg,searching jumia
 document.addEventListener("DOMContentLoaded", () => {
   console.log("⚙️ cache-watcher.js loaded — persistent store tracker active");
 
@@ -49,7 +50,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const source = getLastProductSource();
         if (source && source !== lastShownSource) {
           lastShownSource = source;
-          showPersistentPopup(`🌀 Searching ${source}...`);
+          showPersistentPopup(`Searching ${source}...`);
         }
       }, 500);
     } else {
