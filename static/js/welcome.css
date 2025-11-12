@@ -92,7 +92,8 @@
   right: 1.5rem;
 }
 
-.welcome-close {
+.welcome-close,
+.welcome-next {
   background: none;
   border: none;
   padding: 0;
@@ -105,13 +106,72 @@
   background: linear-gradient(90deg, blue, red);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  transition: opacity 0.2s ease;
 }
 
-.welcome-close:focus {
+.welcome-close:hover,
+.welcome-next:hover {
+  opacity: 0.8;
+}
+
+.welcome-close:focus,
+.welcome-next:focus {
   outline: none;
   text-decoration: underline;
 }
 
+/* Toggle switch styling */
+.toggle-container {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.toggle-switch {
+  position: relative;
+  width: 50px;
+  height: 26px;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0;
+  right: 0; bottom: 0;
+  background-color: #ccc;
+  border-radius: 34px;
+  transition: background-color 0.3s;
+}
+
+.toggle-slider::before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  border-radius: 50%;
+  transition: transform 0.3s;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background: linear-gradient(90deg, blue, red);
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+  transform: translateX(24px);
+}
+
+/* rotating message after overlay */
 #shop-message {
   position: fixed;
   top: 40%;
@@ -180,7 +240,8 @@
 @media (min-width: 900px) {
   .slider span { font-size: 5rem; }
   .footer { font-size: 1.2rem; }
-  .welcome-close { font-size: 1.2rem; }
+  .welcome-close,
+  .welcome-next { font-size: 1.2rem; }
   #shop-message .inline-text { font-size: 1.5rem; }
   #shop-message .inline-text img { width: 40px; height: 40px; }
 }
