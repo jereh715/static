@@ -34,6 +34,28 @@ document.addEventListener("DOMContentLoaded", () => {
   let debounceTimer;
   let lastQuery = "";
 
+  // === Fetch suggestions from Jumia directly ===
+  async function fetchJumiaSuggestions(query) {
+    const url = `https://www.jumia.co.ke/fragment/suggestions/?query=${encodeURIComponent(query)}&lang=en`;
+    try {
+      const response = await fetch(url, { method: 'GET' });
+      if (!response.ok) throw new Error('Network response was not ok: ' + response.statusText);
+
+      const data = await response.text();
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(data, 'text/html');
+
+      const results = Array.from(doc.querySelectorAll('div.name, p'))
+        .map(el => el.textContent.trim())
+        .filter(Boolean);
+
+      return Array.from(new Set(results)).sort();
+    } catch (error) {
+      console.error('❌ Jumia error:', error);
+      return [];
+    }
+  }
+
   // === Helper to render suggestions ===
   function renderSuggestions(synonyms) {
     content.innerHTML = ""; // clear old content
@@ -62,6 +84,8 @@ document.addEventListener("DOMContentLoaded", () => {
       suggestion.addEventListener("click", () => {
         input.value = item;
         input.focus();
+        overlay.style.opacity = "0";
+        setTimeout(() => overlay.style.display = "none", 200);
       });
       content.appendChild(suggestion);
     });
@@ -82,21 +106,15 @@ document.addEventListener("DOMContentLoaded", () => {
     overlay.style.opacity = "1";
 
     if (text !== lastQuery) {
-      debounceTimer = setTimeout(() => {
+      debounceTimer = setTimeout(async () => {
         const currentText = input.value.trim();
         if (currentText === "") return;
         lastQuery = currentText;
 
-        fetch(`/api/synonyms?q=${encodeURIComponent(currentText)}`)
-          .then(res => res.json())
-          .then(data => {
-            if (data && data.synonyms) renderSuggestions(data.synonyms);
-            else renderSuggestions([]);
-          })
-          .catch(err => {
-            content.textContent = `❌ Error: ${err}`;
-          });
-      }, 400);
+        // Fetch suggestions directly from Jumia
+        const suggestions = await fetchJumiaSuggestions(currentText);
+        renderSuggestions(suggestions);
+      }, 300); // Use 300ms debounce like your second code
     }
   });
 
