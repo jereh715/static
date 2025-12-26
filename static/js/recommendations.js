@@ -34,11 +34,19 @@ document.addEventListener("DOMContentLoaded", () => {
   let debounceTimer;
   let lastQuery = "";
 
-  // === Fetch suggestions from Jumia directly ===
+  // === Fetch suggestions from Jumia with Windows User-Agent ===
   async function fetchJumiaSuggestions(query) {
     const url = `https://www.jumia.co.ke/fragment/suggestions/?query=${encodeURIComponent(query)}&lang=en`;
+
     try {
-      const response = await fetch(url, { method: 'GET' });
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.5993.90 Safari/537.36',
+          'Accept': 'text/html'
+        }
+      });
+
       if (!response.ok) throw new Error('Network response was not ok: ' + response.statusText);
 
       const data = await response.text();
@@ -58,7 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // === Helper to render suggestions ===
   function renderSuggestions(synonyms) {
-    content.innerHTML = ""; // clear old content
+    content.innerHTML = "";
 
     if (!synonyms || !synonyms.length) {
       content.textContent = "No recommendations found.";
@@ -114,7 +122,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Fetch suggestions directly from Jumia
         const suggestions = await fetchJumiaSuggestions(currentText);
         renderSuggestions(suggestions);
-      }, 300); // Use 300ms debounce like your second code
+      }, 300); // 300ms debounce
     }
   });
 
