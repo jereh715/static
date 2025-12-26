@@ -3,7 +3,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const input = document.getElementById("query");
   if (!input) return;
 
-  // === Create overlay dynamically ===
   const overlay = document.createElement("div");
   overlay.id = "recommendationOverlay";
   Object.assign(overlay.style, {
@@ -19,29 +18,26 @@ document.addEventListener("DOMContentLoaded", () => {
     overflowY: "auto",
     padding: "20px",
     zIndex: "9999",
-    display: "none",
-    transition: "opacity 0.2s ease"
+    display: "none"
   });
 
   const content = document.createElement("div");
-  Object.assign(content.style, {
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px"
-  });
+  content.style.display = "flex";
+  content.style.flexDirection = "column";
+  content.style.gap = "8px";
   overlay.appendChild(content);
   document.body.appendChild(overlay);
 
   let debounceTimer;
   let lastQuery = "";
 
-  // === Fetch Jumia suggestions ===
+  // === Fetch Jumia suggestions with error capture ===
   async function fetchJumiaSuggestions(query) {
     const url = `https://www.jumia.co.ke/fragment/suggestions/?query=${encodeURIComponent(query)}&lang=en`;
 
     try {
       const res = await fetch(url);
-      if (!res.ok) throw new Error(res.statusText);
+      if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`);
 
       const html = await res.text();
       const doc = new DOMParser().parseFromString(html, "text/html");
@@ -50,19 +46,31 @@ document.addEventListener("DOMContentLoaded", () => {
         .map(el => el.textContent.trim())
         .filter(Boolean);
 
-      return [...new Set(results)].slice(0, 20);
+      return { items: [...new Set(results)], error: null };
     } catch (err) {
       console.error("❌ Jumia fetch error:", err);
-      return [];
+      return { items: [], error: err.message || String(err) };
     }
   }
 
-  // === Render suggestions ===
-  function renderSuggestions(items) {
+  // === Render suggestions + error ===
+  function renderSuggestions(items, error) {
     content.innerHTML = "";
 
-    if (!items || !items.length) {
-      content.textContent = "No recommendations found.";
+    if (!items.length) {
+      const empty = document.createElement("div");
+      empty.textContent = "No recommendations found.";
+      empty.style.fontStyle = "italic";
+      content.appendChild(empty);
+
+      if (error) {
+        const errDiv = document.createElement("div");
+        errDiv.textContent = `❌ ${error}`;
+        errDiv.style.color = "crimson";
+        errDiv.style.fontSize = "13px";
+        errDiv.style.marginTop = "6px";
+        content.appendChild(errDiv);
+      }
       return;
     }
 
@@ -73,16 +81,9 @@ document.addEventListener("DOMContentLoaded", () => {
         padding: "10px 14px",
         borderRadius: "8px",
         background: "#f8f8f8",
-        cursor: "pointer",
-        transition: "background 0.2s"
+        cursor: "pointer"
       });
 
-      suggestion.addEventListener("mouseover", () => {
-        suggestion.style.background = "#e6e6e6";
-      });
-      suggestion.addEventListener("mouseout", () => {
-        suggestion.style.background = "#f8f8f8";
-      });
       suggestion.addEventListener("click", () => {
         input.value = item;
         input.focus();
@@ -94,39 +95,33 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // === Input listener ===
-  input.addEventListener("input", e => {
-    const text = e.target.value.trim();
+  input.addEventListener("input", () => {
+    const text = input.value.trim();
     clearTimeout(debounceTimer);
 
-    if (text === "") {
+    if (!text) {
       overlay.style.display = "none";
       lastQuery = "";
       return;
     }
 
     overlay.style.display = "block";
-    overlay.style.opacity = "1";
     content.textContent = "Loading suggestions...";
 
     if (text !== lastQuery) {
       debounceTimer = setTimeout(async () => {
-        const currentText = input.value.trim();
-        if (!currentText) return;
-        lastQuery = currentText;
+        lastQuery = input.value.trim();
+        if (!lastQuery) return;
 
-        const suggestions = await fetchJumiaSuggestions(currentText);
-        renderSuggestions(suggestions);
+        const { items, error } = await fetchJumiaSuggestions(lastQuery);
+        renderSuggestions(items, error);
       }, 400);
     }
   });
 
-  // === Hide overlay on outside click ===
   document.addEventListener("click", e => {
     if (!overlay.contains(e.target) && e.target !== input) {
-      overlay.style.opacity = "0";
-      setTimeout(() => {
-        overlay.style.display = "none";
-      }, 200);
+      overlay.style.display = "none";
     }
   });
 });
