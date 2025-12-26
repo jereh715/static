@@ -1,112 +1,134 @@
 document.addEventListener("DOMContentLoaded", () => {
-  const input = document.getElementById("query");
-  if (!input) return;
+    const input = document.getElementById("query");
+    if (!input) return;
 
-  // === Create overlay dynamically ===
-  const overlay = document.createElement("div");
-  overlay.id = "recommendationOverlay";
-  Object.assign(overlay.style, {
-    position: "fixed",
-    top: "50%",
-    left: "50%",
-    transform: "translate(-50%, -50%)",
-    width: "95%",
-    height: "70%",
-    background: "white",
-    borderRadius: "12px",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
-    overflowY: "auto",
-    padding: "20px",
-    zIndex: "9999",
-    display: "none",
-    transition: "opacity 0.2s ease"
-  });
-
-  const content = document.createElement("div");
-  Object.assign(content.style, {
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px"
-  });
-  overlay.appendChild(content);
-  document.body.appendChild(overlay);
-
-  let debounceTimer;
-  let lastQuery = "";
-
-  // === Helper to render suggestions ===
-  function renderSuggestions(synonyms) {
-    content.innerHTML = ""; // clear old content
-
-    if (!synonyms || !synonyms.length) {
-      content.textContent = "No recommendations found.";
-      return;
-    }
-
-    synonyms.forEach((item) => {
-      const suggestion = document.createElement("div");
-      suggestion.textContent = item;
-      Object.assign(suggestion.style, {
-        padding: "10px 14px",
-        borderRadius: "8px",
-        background: "#f8f8f8",
-        cursor: "pointer",
-        transition: "background 0.2s"
-      });
-      suggestion.addEventListener("mouseover", () => {
-        suggestion.style.background = "#e6e6e6";
-      });
-      suggestion.addEventListener("mouseout", () => {
-        suggestion.style.background = "#f8f8f8";
-      });
-      suggestion.addEventListener("click", () => {
-        input.value = item;
-        input.focus();
-      });
-      content.appendChild(suggestion);
+    // === Create overlay dynamically ===
+    const overlay = document.createElement("div");
+    overlay.id = "recommendationOverlay";
+    Object.assign(overlay.style, {
+        position: "fixed",
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
+        width: "95%",
+        maxWidth: "600px",
+        height: "auto",
+        background: "white",
+        borderRadius: "12px",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+        overflowY: "auto",
+        padding: "20px",
+        zIndex: "9999",
+        display: "none",
+        transition: "opacity 0.2s ease"
     });
-  }
 
-  // === Input listener ===
-  input.addEventListener("input", (e) => {
-    const text = e.target.value.trim();
-    clearTimeout(debounceTimer);
+    const content = document.createElement("div");
+    Object.assign(content.style, {
+        display: "flex",
+        flexDirection: "column",
+        gap: "8px"
+    });
+    overlay.appendChild(content);
+    document.body.appendChild(overlay);
 
-    if (text === "") {
-      overlay.style.display = "none";
-      lastQuery = "";
-      return;
+    let debounceTimer;
+    let lastQuery = "";
+
+    // === Helper to render suggestions ===
+    function renderSuggestions(synonyms) {
+        content.innerHTML = ""; // Clear old content
+
+        if (!synonyms || !synonyms.length) {
+            content.textContent = "No recommendations found.";
+            return;
+        }
+
+        synonyms.forEach((item) => {
+            const suggestion = document.createElement("div");
+            suggestion.textContent = item;
+            Object.assign(suggestion.style, {
+                padding: "10px 14px",
+                borderRadius: "8px",
+                background: "#f8f8f8",
+                cursor: "pointer",
+                transition: "background 0.2s"
+            });
+            suggestion.addEventListener("mouseover", () => {
+                suggestion.style.background = "#e6e6e6";
+            });
+            suggestion.addEventListener("mouseout", () => {
+                suggestion.style.background = "#f8f8f8";
+            });
+            suggestion.addEventListener("click", () => {
+                input.value = item;
+                input.focus();
+                overlay.style.opacity = "0"; // Hide overlay
+                setTimeout(() => overlay.style.display = "none", 200);
+            });
+            content.appendChild(suggestion);
+        });
     }
 
-    overlay.style.display = "block";
-    overlay.style.opacity = "1";
+    // === Input listener ===
+    input.addEventListener("input", (e) => {
+        const text = e.target.value.trim();
+        clearTimeout(debounceTimer);
 
-    if (text !== lastQuery) {
-      debounceTimer = setTimeout(() => {
-        const currentText = input.value.trim();
-        if (currentText === "") return;
-        lastQuery = currentText;
+        if (text === "") {
+            overlay.style.display = "none";
+            lastQuery = "";
+            return;
+        }
 
-        fetch(`/api/synonyms?q=${encodeURIComponent(currentText)}`)
-          .then(res => res.json())
-          .then(data => {
-            if (data && data.synonyms) renderSuggestions(data.synonyms);
-            else renderSuggestions([]);
-          })
-          .catch(err => {
-            content.textContent = `❌ Error: ${err}`;
-          });
-      }, 400);
-    }
-  });
+        overlay.style.display = "block";
+        overlay.style.opacity = "1";
 
-  // === Hide overlay when clicking outside input/overlay ===
-  document.addEventListener("click", (e) => {
-    if (!overlay.contains(e.target) && e.target !== input) {
-      overlay.style.opacity = "0";
-      setTimeout(() => {
-        overlay.style.display = "none";
-      }, 200);
-    }
-  });
+        if (text !== lastQuery) {
+            debounceTimer = setTimeout(async () => {
+                const currentText = input.value.trim();
+                if (currentText === "") return;
+                lastQuery = currentText;
+
+                const suggestions = await fetchJumiaSuggestions(currentText);
+                if (suggestions) renderSuggestions(suggestions);
+            }, 400);
+        }
+    });
+
+    // === Hide overlay when clicking outside input/overlay ===
+    document.addEventListener("click", (e) => {
+        if (!overlay.contains(e.target) && e.target !== input) {
+            overlay.style.opacity = "0";
+            setTimeout(() => {
+                overlay.style.display = "none";
+            }, 200);
+        }
+    });
 });
+
+// === Fetch Jumia Suggestions ===
+async function fetchJumiaSuggestions(query) {
+    const url = `https://www.jumia.co.ke/fragment/suggestions/?query=${encodeURIComponent(query)}&lang=en`;
+
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error('Network response was not ok: ' + response.statusText);
+        }
+
+        const data = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(data, 'text/html');
+
+        // Extract suggestion texts
+        const results = Array.from(doc.querySelectorAll('div.name, p'))
+            .map(element => element.textContent.trim())
+            .filter(Boolean);
+
+        return Array.from(new Set(results)).sort(); // Return unique and sorted results
+    } catch (error) {
+        console.error('❌ Jumia error:', error);
+        return [];
+    }
+}
