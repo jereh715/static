@@ -34,39 +34,9 @@ document.addEventListener("DOMContentLoaded", () => {
   let debounceTimer;
   let lastQuery = "";
 
-  // === Fetch suggestions from Jumia with Windows User-Agent ===
-  async function fetchJumiaSuggestions(query) {
-    const url = `https://www.jumia.co.ke/fragment/suggestions/?query=${encodeURIComponent(query)}&lang=en`;
-
-    try {
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.5993.90 Safari/537.36',
-          'Accept': 'text/html'
-        }
-      });
-
-      if (!response.ok) throw new Error('Network response was not ok: ' + response.statusText);
-
-      const data = await response.text();
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(data, 'text/html');
-
-      const results = Array.from(doc.querySelectorAll('div.name, p'))
-        .map(el => el.textContent.trim())
-        .filter(Boolean);
-
-      return Array.from(new Set(results)).sort();
-    } catch (error) {
-      console.error('❌ Jumia error:', error);
-      return [];
-    }
-  }
-
   // === Helper to render suggestions ===
   function renderSuggestions(synonyms) {
-    content.innerHTML = "";
+    content.innerHTML = ""; // clear old content
 
     if (!synonyms || !synonyms.length) {
       content.textContent = "No recommendations found.";
@@ -92,8 +62,6 @@ document.addEventListener("DOMContentLoaded", () => {
       suggestion.addEventListener("click", () => {
         input.value = item;
         input.focus();
-        overlay.style.opacity = "0";
-        setTimeout(() => overlay.style.display = "none", 200);
       });
       content.appendChild(suggestion);
     });
@@ -114,15 +82,21 @@ document.addEventListener("DOMContentLoaded", () => {
     overlay.style.opacity = "1";
 
     if (text !== lastQuery) {
-      debounceTimer = setTimeout(async () => {
+      debounceTimer = setTimeout(() => {
         const currentText = input.value.trim();
         if (currentText === "") return;
         lastQuery = currentText;
 
-        // Fetch suggestions directly from Jumia
-        const suggestions = await fetchJumiaSuggestions(currentText);
-        renderSuggestions(suggestions);
-      }, 300); // 300ms debounce
+        fetch(`/api/synonyms?q=${encodeURIComponent(currentText)}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data && data.synonyms) renderSuggestions(data.synonyms);
+            else renderSuggestions([]);
+          })
+          .catch(err => {
+            content.textContent = `❌ Error: ${err}`;
+          });
+      }, 200); // <-- reduced debounce from 400ms to 200ms
     }
   });
 
