@@ -1,102 +1,191 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jumia Suggestions</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        #suggestions {
-            margin-top: 20px;
-            border-top: 1px solid #ccc;
-            padding-top: 10px;
-        }
-        .suggestion {
-            margin: 5px 0;
-            padding: 8px;
-            border: 1px solid #ddd;
-        }
-        .loading {
-            font-style: italic;
-            color: gray;
-        }
-        .error {
-            color: red;
-            font-weight: bold;
-            margin-top: 10px;
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Send Notification</title>
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial; max-width:800px; margin:40px auto; padding:0 16px; color:#111; }
+    h1 { font-size: 1.6rem; margin-bottom: 0.2rem; }
+    label { display:block; margin:14px 0 6px; font-weight:600; }
+    input[type="text"], input[type="number"], textarea {
+      width:100%; padding:10px; border:1px solid #ddd;
+      border-radius:6px; font-size:1rem;
+    }
+    button {
+      padding:10px 14px; border-radius:8px; border:0;
+      background:#0b76ef; color:white; font-weight:600; cursor:pointer;
+    }
+    button[disabled]{opacity:0.6; cursor:default;}
+    .small { font-size:0.9rem; color:#555; }
+    .status { margin-top:12px; padding:12px; border-radius:8px; background:#f6f8fb; border:1px solid #e6eefc; }
+    .error { color:#b00020; font-weight:600; }
+    .success { color:#116622; font-weight:600; }
+    #notifContainer { margin-top: 24px; padding: 16px; background: #f9fafc; border: 1px solid #e3e9f4; border-radius: 8px; }
+    #notifContainer h2 { margin-top: 0; font-size: 1.2rem; }
+    pre.json-output { white-space: pre-wrap; background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 10px; font-size: 0.9rem; }
+    .row { display:flex; gap:12px; flex-wrap:wrap; }
+    .row div { flex:1; min-width:120px; }
+  </style>
 </head>
 <body>
-    <h1>Jumia Search Suggestions</h1>
-    <input id="query" type="text" placeholder="Enter a search term" />
-    <div id="suggestions"></div>
+  <h1>Send Notification</h1>
+  <p class="small">
+    This version always uses the constant title <strong>Offers</strong>.  
+    The message field is your product query (e.g. <em>water dispenser</em>).
+  </p>
 
-    <script>
-        let timeout = null;
+  <form id="notifyForm">
+    <label for="message">Product / Query</label>
+    <textarea id="message" name="message" rows="3" placeholder="E.g. water dispenser" required></textarea>
 
-        async function fetchJumiaSuggestions(query) {
-            const url = `https://www.jumia.co.ke/fragment/suggestions/?query=${encodeURIComponent(query)}&lang=en`;
+    <div class="row">
+      <div>
+        <label for="loops">Loops (count)</label>
+        <input id="loops" name="loops" type="number" min="0" value="6" />
+      </div>
+      <div>
+        <label for="seconds">Delay Between (seconds)</label>
+        <input id="seconds" name="seconds" type="number" min="10" value="7200" />
+      </div>
+    </div>
 
-            try {
-                const response = await fetch(url, { method: 'GET' });
+    <div style="margin-top:12px; display:flex; gap:8px;">
+      <button id="sendBtn" type="submit">Send Notification</button>
+      <button id="testBrowserBtn" type="button">Show Local Browser Notification</button>
+      <button id="loadJsonBtn" type="button">Load Notification JSON</button>
+    </div>
+  </form>
 
-                if (!response.ok) {
-                    throw new Error('Network response was not ok: ' + response.statusText);
-                }
+  <div class="status" id="statusArea" hidden>
+    <div id="statusText"></div>
+    <pre id="responseRaw" style="margin-top:8px; white-space:pre-wrap; font-size:0.9rem;"></pre>
+  </div>
 
-                const data = await response.text();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(data, 'text/html');
+  <div id="notifContainer" hidden>
+    <h2>📦 Cached Notifications JSON</h2>
+    <pre id="notifJson" class="json-output"></pre>
+  </div>
 
-                // Extract suggestion texts
-                const results = Array.from(doc.querySelectorAll('div.name, p'))
-                    .map(element => element.textContent.trim())
-                    .filter(Boolean);
+<script>
+(() => {
+  const API_URL = "/notify_scheduler";
+  const JSON_URL = "/api/notifications";
+  const form = document.getElementById("notifyForm");
+  const sendBtn = document.getElementById("sendBtn");
+  const testBrowserBtn = document.getElementById("testBrowserBtn");
+  const loadJsonBtn = document.getElementById("loadJsonBtn");
+  const statusArea = document.getElementById("statusArea");
+  const statusText = document.getElementById("statusText");
+  const responseRaw = document.getElementById("responseRaw");
+  const notifContainer = document.getElementById("notifContainer");
+  const notifJson = document.getElementById("notifJson");
+  const CONSTANT_TITLE = "Offers";
 
-                return Array.from(new Set(results)).sort(); // Return unique and sorted results
-            } catch (error) {
-                // Throw error to be handled in input listener
-                throw error;
-            }
+  function showStatus(text, kind = "") {
+    statusArea.hidden = false;
+    statusText.textContent = text;
+    statusText.className = kind === "error" ? "error" :
+                           (kind === "success" ? "success" : "");
+  }
+
+  async function requestNotificationPermissionOnce() {
+    if (!("Notification" in window)) return false;
+    if (Notification.permission === "granted") return true;
+    if (Notification.permission === "denied") return false;
+    const p = await Notification.requestPermission().catch(() => "denied");
+    return p === "granted";
+  }
+
+  async function sendNotificationRequest(message, loops, seconds) {
+    sendBtn.disabled = true;
+    showStatus("Sending notification request to server...");
+    responseRaw.textContent = "";
+
+    try {
+      const payload = { title: CONSTANT_TITLE, message, loops, seconds };
+      const resp = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await resp.json().catch(() => ({}));
+      responseRaw.textContent = JSON.stringify({ status: resp.status, body: data }, null, 2);
+
+      if (!resp.ok) {
+        showStatus(`Server responded with error (HTTP ${resp.status}).`, "error");
+      } else {
+        showStatus("Server responded successfully.", "success");
+        const permitted = await requestNotificationPermissionOnce();
+        if (permitted) {
+          new Notification(CONSTANT_TITLE, { body: message });
         }
+      }
+    } catch (err) {
+      showStatus("Request failed — is the Flask server running?", "error");
+      responseRaw.textContent = String(err);
+    } finally {
+      sendBtn.disabled = false;
+    }
+  }
 
-        document.getElementById('query').addEventListener('input', async (event) => {
-            const query = event.target.value.trim();
-            const suggestionsDiv = document.getElementById('suggestions');
-            suggestionsDiv.innerHTML = ''; // Clear previous suggestions
+  async function loadNotificationJson() {
+    notifContainer.hidden = false;
+    notifJson.textContent = "⏳ Loading notification JSON...";
+    try {
+      const resp = await fetch(JSON_URL);
+      const data = await resp.json();
+      notifJson.textContent = JSON.stringify(data, null, 2);
+      showStatus("Loaded notification JSON successfully.", "success");
+    } catch (err) {
+      notifJson.textContent = "❌ Failed to load notification JSON:\n" + err;
+      showStatus("Failed to load notification JSON.", "error");
+    }
+  }
 
-            if (query.length === 0) return; // No input
+  form.addEventListener("submit", async ev => {
+    ev.preventDefault();
+    const message = document.getElementById("message").value.trim();
+    const loopsInput = document.getElementById("loops").value;
+    const secondsInput = document.getElementById("seconds").value;
 
-            // Show loading text while fetching
-            suggestionsDiv.innerHTML = '<div class="loading">Loading suggestions...</div>';
+    const loops = loopsInput === "" ? 6 : parseInt(loopsInput, 10);
+    const seconds = secondsInput === "" ? 7200 : parseInt(secondsInput, 10);
 
-            clearTimeout(timeout);
+    if (!message) {
+      showStatus("Please provide a message.", "error");
+      return;
+    }
 
-            timeout = setTimeout(async () => {
-                try {
-                    const suggestions = await fetchJumiaSuggestions(query);
-                    suggestionsDiv.innerHTML = ''; // Clear loading
+    // Inform user of mode
+    if (loops === 0) {
+      showStatus("Instant notification mode — sending immediately.", "success");
+    } else {
+      showStatus(`Scheduling ${loops} notifications every ${seconds} seconds.`, "success");
+    }
 
-                    if (suggestions.length > 0) {
-                        suggestions.forEach(item => {
-                            const div = document.createElement('div');
-                            div.className = 'suggestion';
-                            div.textContent = item;
-                            suggestionsDiv.appendChild(div);
-                        });
-                    } else {
-                        suggestionsDiv.textContent = 'No suggestions found.';
-                    }
-                } catch (err) {
-                    // Display error on the page
-                    suggestionsDiv.innerHTML = `<div class="error">❌ Error: ${err.message}</div>`;
-                }
-            }, 300);
-        });
-    </script>
+    await sendNotificationRequest(message, loops, seconds);
+  });
+
+  testBrowserBtn.addEventListener("click", async () => {
+    const message = document.getElementById("message").value.trim() ||
+                    "This is a local browser notification.";
+    const permitted = await requestNotificationPermissionOnce();
+    if (!permitted) {
+      showStatus("Browser notification permission denied.", "error");
+      return;
+    }
+    new Notification(CONSTANT_TITLE, { body: message });
+    showStatus("Local browser notification shown.", "success");
+  });
+
+  loadJsonBtn.addEventListener("click", loadNotificationJson);
+
+  if (location.protocol === "file:") {
+    showStatus("Notice: Open through a server to call the API.", "error");
+  }
+})();
+</script>
 </body>
 </html>
