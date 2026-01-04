@@ -236,15 +236,29 @@
   }
 
   /* ---------------- GEMINI INSIGHT ---------------- */
-  const GEMINI_API_KEY = "AIzaSyDI_9R2l_sUKcp4nwKMj7SEbVexN47Nr7Q";
-  const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+  let GEMINI_KEY = null;
+  let GEMINI_URL = null;
+
+  async function loadGeminiKey() {
+    try {
+      const res = await fetch("./gemini.txt");
+      GEMINI_KEY = (await res.text()).trim();
+      GEMINI_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`;
+    } catch (e) {
+      console.error("Failed to load Gemini key:", e);
+      addPopup("⚠️ Cannot load Gemini key");
+    }
+  }
 
   async function fetchGeminiInsight(mainProduct, similarProducts) {
+    if (!GEMINI_URL) await loadGeminiKey();
+    if (!GEMINI_URL) return "⚠️ Gemini key missing.";
+
     const prompt = `
       The main product is: ${mainProduct.title} (Price: ${mainProduct.price}).
       Similar products: 
       ${similarProducts.map(p => `${p.title} (Price: ${p.price})`).join("\n")}
-      
+
       Please provide a concise comparison/insight of how the main product stands against these similar options (value, uniqueness, etc.).
     `;
     try {
@@ -364,7 +378,7 @@
             minDist = dist;
             closest = item;
           }
-          item.classList.remove("active"); // we removed green highlight styling
+          item.classList.remove("active");
         });
         if (closest) closest.classList.add("active");
       });
