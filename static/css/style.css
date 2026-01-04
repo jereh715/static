@@ -489,7 +489,7 @@ button.sort-btn {
   }
 
   .product {
-    width: 180px; /* fixed width */
+    width: 185px; /* fixed width */
     max-width: 100%;
     margin-bottom: 5px;
     box-sizing: border-box;
