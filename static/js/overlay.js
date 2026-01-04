@@ -238,7 +238,7 @@
   /* ---------------- GEMINI INSIGHT ---------------- */
   const BASE64_GEMINI_KEY = "QUl6YVN5Qjc0cHhfMDYwa3lEUEZ3NnhZcll3OTJ2SzZjYnB0eG53"; // hardcoded Base64
   const GEMINI_KEY = atob(BASE64_GEMINI_KEY);
-  const GEMINI_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`;
+  const GEMINI_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash-Lite:generateContent?key=${GEMINI_KEY}`;
 
   async function fetchGeminiInsight(mainProduct, similarProducts) {
     const prompt = `
