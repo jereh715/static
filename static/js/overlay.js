@@ -236,25 +236,11 @@
   }
 
   /* ---------------- GEMINI INSIGHT ---------------- */
-  let GEMINI_KEY = null;
-  let GEMINI_URL = null;
-
-  async function loadGeminiKey() {
-    try {
-      const res = await fetch("./gemini.txt");
-      const base64Key = (await res.text()).trim();
-      GEMINI_KEY = atob(base64Key); // decode Base64
-      GEMINI_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`;
-    } catch (e) {
-      console.error("Failed to load Gemini key:", e);
-      addPopup("⚠️ Cannot load Gemini key");
-    }
-  }
+  const BASE64_GEMINI_KEY = "QUl6YVN5Qjc0cHhfMDYwa3lEUEZ3NnhZcll3OTJ2SzZjYnB0eG53"; // hardcoded Base64
+  const GEMINI_KEY = atob(BASE64_GEMINI_KEY);
+  const GEMINI_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`;
 
   async function fetchGeminiInsight(mainProduct, similarProducts) {
-    if (!GEMINI_URL) await loadGeminiKey();
-    if (!GEMINI_URL) return "⚠️ Gemini key missing.";
-
     const prompt = `
       The main product is: ${mainProduct.title} (Price: ${mainProduct.price}).
       Similar products: 
@@ -289,7 +275,6 @@
     const body = document.getElementById("aiOverlayBody");
     const dots = document.getElementById("similarDots");
 
-    // --- Base product ---
     let html = `
       <div class="main-product">
         <img src="${product.img || product.image_url || ""}" alt="${product.title}">
@@ -301,13 +286,9 @@
       </div>
     `;
 
-    // --- Spacer (Gemini AI section) ---
     html += `<div class="spacer-card" id="spacerCard">Generating insights...</div>`;
-
-    // --- Title before similar section ---
     html += `<div class="section-title">Similar Products</div>`;
 
-    // --- Similar products logic ---
     let allProducts = [];
     try {
       const saved = localStorage.getItem("lastSearchResults");
@@ -330,7 +311,7 @@
         }))
         .filter(p => p.priceNum >= min && p.priceNum <= max)
         .sort((a, b) => b.score - a.score)
-        .slice(0, 10); // max 10 products
+        .slice(0, 10);
 
       if (scored.length) {
         html += `<div class="similar-list">`;
@@ -365,7 +346,6 @@
       el.addEventListener("click", () => sendProductLink(el.dataset.link));
     });
 
-    // Scroll dots update
     const list = body.querySelector(".similar-list");
     if (list) {
       list.addEventListener("scroll", () => {
