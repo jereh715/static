@@ -478,77 +478,45 @@ button.sort-btn {
   }
 
   /* ---------------- MOBILE PRODUCTS FLEX ---------------- */
- #products {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 5px;
-  padding-left: 0;
-  padding-right: 0;
-  margin-top: 110px;
-}
-
-.product {
-  width: 185px;
-  max-width: 100%;
-  margin-bottom: 5px;
-  box-sizing: border-box;
-}
-
-.product img {
-  height: 120px;
-  object-fit: cover;
-  margin-bottom: 6px;
-}
-
-.product h3,
-.product p {
-  font-size: 13px;
-}
-
-/* Dummy Row Styles */
-.dummy-row {
-  display: none; /* Hide by default */
-}
-
-/* Mobile Styles */
-@media (max-width: 400px) {
   #products {
-    flex-direction: column; /* stack products vertically */
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between; /* left product left, right product right */
+    gap: 10px;
+    padding-left: 0;
+    padding-right: 0;
+    margin-top: 120px;
   }
 
   .product {
-    display: none; /* hide all products by default */
+    width: 180px; /* fixed width */
+    max-width: 100%;
+    margin-bottom: 10px;
+    box-sizing: border-box;
   }
 
-  .product:nth-child(-n+4) {
-    display: flex; /* only show the first 4 products */
+  .product img {
+    height: 120px;
+    object-fit: cover;
+    margin-bottom: 6px;
   }
 
-  /* Create the Dummy Row with Pseudo-Elements */
-  #products::after {
-    content: '';
-    display: grid;
-    grid-template-columns: repeat(3, 1fr); /* 3 columns */
-    gap: 10px; /* gap between items */
-    margin-top: 20px; /* space above the dummy row */
+  .product h3,
+  .product p {
+    font-size: 13px;
   }
+}
 
-  /* Add Dummy Items */
-  #products::after {
-    content: 'Dummy Item 1, Dummy Item 2, Dummy Item 3';
-    grid-column: 1 / -1; /* Full-width */
-    font-size: 0.85em; /* Text size */
-    padding: 8px; /* Padding around items */
-    text-align: center; /* Center text */
-    background: #f0f0f0; /* Background color for visibility */
+@media (max-width: 400px) {
+  #storeGrid {
+    grid-template-columns: 1fr;
   }
-
   .store-item {
     font-size: 0.85em;
     padding: 8px;
   }
 }
+
 /* ---------------- STORE AND PRICE COLORS ---------------- */
 .product .store-name {
   color: #fd7e14; /* orange */
