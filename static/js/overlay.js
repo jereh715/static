@@ -242,7 +242,8 @@
   async function loadGeminiKey() {
     try {
       const res = await fetch("./gemini.txt");
-      GEMINI_KEY = (await res.text()).trim();
+      const base64Key = (await res.text()).trim();
+      GEMINI_KEY = atob(base64Key); // decode Base64
       GEMINI_URL = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_KEY}`;
     } catch (e) {
       console.error("Failed to load Gemini key:", e);
