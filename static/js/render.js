@@ -6,12 +6,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // Create the container for your text / product cards
   const preProducts = document.createElement("div");
   preProducts.id = "pre-products";
-  preProducts.style.padding = "10px";
+  preProducts.style.padding = "1px";
   preProducts.style.textAlign = "center";
   preProducts.style.fontSize = "16px";
   preProducts.style.fontWeight = "600";
   preProducts.style.marginTop = "120px"; // distance from top
-  preProducts.style.border = "3px solid pink"; // visualize the div
   preProducts.style.display = "flex"; // flex row for 3 cards
   preProducts.style.gap = "5px"; // 5px gap between cards
   preProducts.style.justifyContent = "space-between"; // evenly spaced
