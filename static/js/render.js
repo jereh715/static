@@ -6,24 +6,26 @@ document.addEventListener("DOMContentLoaded", () => {
   // Create the container for your text / product cards
   const preProducts = document.createElement("div");
   preProducts.id = "pre-products";
-  preProducts.style.padding = "1px";
-  preProducts.style.textAlign = "center";
-  preProducts.style.fontSize = "16px";
-  preProducts.style.fontWeight = "600";
+  preProducts.style.padding = "10px 0";
+  preProducts.style.display = "flex";
+  preProducts.style.overflowX = "auto"; // allow horizontal scroll
+  preProducts.style.gap = "5px";        // gap between cards
   preProducts.style.marginTop = "120px"; // distance from top
-  preProducts.style.display = "flex"; // flex row for 3 cards
-  preProducts.style.gap = "5px"; // 5px gap between cards
-  preProducts.style.justifyContent = "space-between"; // evenly spaced
   preProducts.style.boxSizing = "border-box";
 
-  // Generate 3 sample product cards
-  for (let i = 0; i < 3; i++) {
+  // Hide scrollbar for modern browsers
+  preProducts.style.scrollBehavior = "smooth";
+
+  // Generate 20 cards
+  const totalCards = 20;
+  for (let i = 0; i < totalCards; i++) {
     const card = document.createElement("div");
 
-    // Calculate width: (screen width - 10px gap) / 3
-    const cardWidth = (window.innerWidth - 10) / 3; // in px
+    // Calculate width so 3 cards fit the screen width minus total gaps
+    const cardWidth = (window.innerWidth - 10) / 3; // 3 visible cards
 
     Object.assign(card.style, {
+      flex: "0 0 auto",          // prevent shrinking
       width: `${cardWidth}px`,
       height: "100px",
       borderRadius: "12px",
@@ -51,11 +53,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   observer.observe(resultsDiv, { childList: true, subtree: true });
 
-  // Optional: recalc card widths on window resize
+  // Recalculate card widths on window resize
   window.addEventListener("resize", () => {
     const cards = preProducts.children;
+    const cardWidth = (window.innerWidth - 10) / 3;
     for (let i = 0; i < cards.length; i++) {
-      cards[i].style.width = `${(window.innerWidth - 10) / 3}px`;
+      cards[i].style.width = `${cardWidth}px`;
     }
   });
 });
