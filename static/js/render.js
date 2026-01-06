@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
   preProducts.style.textAlign = "center";
   preProducts.style.fontSize = "16px";
   preProducts.style.fontWeight = "600";
-  preProducts.style.marginTop = "150px"; // <-- keeps 250px from top
+  preProducts.style.marginTop = "100px"; // <-- keeps 250px from top
   preProducts.style.border = "3px solid pink"; // <-- visualize the div
   preProducts.textContent = "👋 Welcome! Here are some recommendations:";
 
