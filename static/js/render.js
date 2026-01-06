@@ -10,7 +10,8 @@ document.addEventListener("DOMContentLoaded", () => {
   preProducts.style.textAlign = "center";
   preProducts.style.fontSize = "16px";
   preProducts.style.fontWeight = "600";
-  preProducts.style.marginTop = "250px"; // <-- pushes it 250px from the top
+  preProducts.style.marginTop = "250px"; // <-- keeps 250px from top
+  preProducts.style.border = "3px solid pink"; // <-- visualize the div
   preProducts.textContent = "👋 Welcome! Here are some recommendations:";
 
   // Wait for #products to appear, then insert before it
