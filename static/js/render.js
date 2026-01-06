@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
   preProducts.style.display = "flex";
   preProducts.style.overflowX = "auto"; // allow horizontal scroll
   preProducts.style.gap = "5px";        // gap between cards
-  preProducts.style.marginTop = "120px"; // distance from top
+  preProducts.style.marginTop = "100px"; // distance from top
   preProducts.style.boxSizing = "border-box";
 
   // Hide scrollbar for modern browsers
