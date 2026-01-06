@@ -1,3 +1,4 @@
+// render.js
 document.addEventListener("DOMContentLoaded", () => {
   const resultsDiv = document.getElementById("results");
   if (!resultsDiv) return;
@@ -5,28 +6,19 @@ document.addEventListener("DOMContentLoaded", () => {
   // Create the container for your text
   const preProducts = document.createElement("div");
   preProducts.id = "pre-products";
+  preProducts.style.padding = "10px";
+  preProducts.style.textAlign = "center";
+  preProducts.style.fontSize = "16px";
+  preProducts.style.fontWeight = "600";
+  preProducts.style.marginTop = "250px"; // <-- pushes it 250px from the top
   preProducts.textContent = "👋 Welcome! Here are some recommendations:";
 
-  // Style it to appear 250px from top without pushing products
-  Object.assign(preProducts.style, {
-    position: "absolute",
-    top: "250px",     // 250px from top of screen
-    left: "0",
-    right: "0",
-    textAlign: "center",
-    fontSize: "16px",
-    fontWeight: "600",
-    padding: "10px",
-    zIndex: "1000",
-    backgroundColor: "rgba(255,255,255,0.95)" // optional, looks nice
-  });
-
-  // Wait for #products to appear, then append it to results container
+  // Wait for #products to appear, then insert before it
   const observer = new MutationObserver(() => {
     const productsDiv = document.getElementById("products");
     if (productsDiv && !document.getElementById("pre-products")) {
-      resultsDiv.appendChild(preProducts);
-      observer.disconnect();
+      productsDiv.parentNode.insertBefore(preProducts, productsDiv);
+      observer.disconnect(); // stop observing once done
     }
   });
 
