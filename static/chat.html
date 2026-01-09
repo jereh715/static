@@ -2,33 +2,27 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Price Groups (Ignoring Ranges)</title>
+  <title>Price Groups (Up to 10)</title>
 </head>
 <body>
 
-<h1>Price Groups Viewer (Ignoring Price Ranges)</h1>
+<h1>Price Groups Viewer (Ignoring Ranges, Max 10 Groups)</h1>
 <p id="info"></p>
 
 <div id="groups"></div>
 
 <script>
 // ---------------- Normalize price ----------------
-// Ignores ranges like "1200 - 2300"
 function normalizePrice(priceStr) {
-  if (!priceStr) return null; // null means ignore
-
-  if (priceStr.includes('-')) return null; // ignore range
-
-  // Remove commas and currency symbols
+  if (!priceStr) return null;
+  if (priceStr.includes('-')) return null; // ignore ranges
   const clean = priceStr.replace(/,/g, '').replace(/[^\d.]/g, '').trim();
-
   const num = parseFloat(clean);
   return isNaN(num) ? null : num;
 }
 
-// ---------------- Create up to 4 price groups ----------------
-function createPriceGroups(products, maxGroups = 4) {
-  // Filter products with valid single prices
+// ---------------- Create price groups ----------------
+function createPriceGroups(products, maxGroups = 10) {
   const validProducts = products
     .map(p => ({ ...p, numericPrice: normalizePrice(p.price) }))
     .filter(p => p.numericPrice !== null)
@@ -38,7 +32,6 @@ function createPriceGroups(products, maxGroups = 4) {
 
   const minPrice = validProducts[0].numericPrice;
   const maxPrice = validProducts[validProducts.length - 1].numericPrice;
-
   const range = maxPrice - minPrice;
   const step = range / maxGroups;
 
@@ -49,7 +42,6 @@ function createPriceGroups(products, maxGroups = 4) {
     const upper = i === maxGroups - 1 ? maxPrice : lower + step;
 
     const grpProducts = validProducts.filter(p => p.numericPrice >= lower && p.numericPrice <= upper);
-
     if (grpProducts.length > 0) {
       groups.push({ lower, upper, products: grpProducts });
     }
@@ -108,7 +100,7 @@ function displayGroups(groups) {
 
   info.textContent = `Total products in cache: ${products.length}`;
 
-  const groups = createPriceGroups(products, 4); // Max 4 groups
+  const groups = createPriceGroups(products, 10); // Max 10 groups
   displayGroups(groups);
 })();
 </script>
