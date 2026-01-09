@@ -2,60 +2,113 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Raw lastSearchResults Cache</title>
+  <title>Dynamic Price Groups Viewer</title>
 </head>
 <body>
 
-<h1>Raw Cache: lastSearchResults</h1>
-
+<h1>Dynamic Price Groups Viewer</h1>
 <p id="info"></p>
 
-<pre id="raw"></pre>
-
-<hr>
-
-<div id="list"></div>
+<div id="groups"></div>
 
 <script>
-(function loadCache() {
+// ---------------- Parse price to numeric ----------------
+function parsePrice(priceStr) {
+  return parseFloat((priceStr || "").replace(/[^\d.]/g, "")) || 0;
+}
+
+// ---------------- Sort products ascending by price ----------------
+function sortByPrice(products) {
+  return products
+    .map(p => ({ ...p, numericPrice: parsePrice(p.price) }))
+    .sort((a, b) => a.numericPrice - b.numericPrice);
+}
+
+// ---------------- Dynamic price grouping ----------------
+// thresholdPercent: relative jump to start a new group
+function dynamicPriceGroups(products, thresholdPercent = 0.3) {
+  const sorted = sortByPrice(products);
+  const groups = [];
+  let currentGroup = [];
+
+  sorted.forEach((p, i) => {
+    if (i === 0) {
+      currentGroup.push(p);
+    } else {
+      const prevPrice = sorted[i - 1].numericPrice;
+      const diff = p.numericPrice - prevPrice;
+
+      if (diff / prevPrice > thresholdPercent) {
+        // Start a new group
+        groups.push(currentGroup);
+        currentGroup = [p];
+      } else {
+        currentGroup.push(p);
+      }
+    }
+  });
+
+  if (currentGroup.length) groups.push(currentGroup);
+  return groups;
+}
+
+// ---------------- Display grouped products ----------------
+function displayGroups(groups) {
+  const container = document.getElementById("groups");
+  container.innerHTML = "";
+
+  groups.forEach((grp, idx) => {
+    const groupDiv = document.createElement("div");
+
+    // Group header with price range
+    const prices = grp.map(p => p.numericPrice);
+    const min = Math.min(...prices);
+    const max = Math.max(...prices);
+    const header = document.createElement("h2");
+    header.textContent = `Group ${idx + 1} | ${grp.length} products | Price: ${min} - ${max}`;
+    groupDiv.appendChild(header);
+
+    // List products
+    grp.forEach(p => {
+      const div = document.createElement("div");
+      div.innerHTML = `
+        <strong>${p.title}</strong><br>
+        Price: ${p.price}<br>
+        Source: ${p.source || "N/A"}<br>
+        Link: <a href="${p.link || p.product_link || "#"}" target="_blank">${p.link || p.product_link || "N/A"}</a><br>
+        Image: <a href="${p.image_url || "#"}" target="_blank">view</a>
+        <hr>
+      `;
+      groupDiv.appendChild(div);
+    });
+
+    container.appendChild(groupDiv);
+  });
+}
+
+// ---------------- Main ----------------
+(function main() {
   const info = document.getElementById("info");
-  const raw = document.getElementById("raw");
-  const list = document.getElementById("list");
-
   const cached = localStorage.getItem("lastSearchResults");
-
   if (!cached) {
     info.textContent = "No lastSearchResults found in localStorage.";
     return;
   }
 
-  let data;
+  let products;
   try {
-    data = JSON.parse(cached);
+    products = JSON.parse(cached);
   } catch (e) {
-    info.textContent = "Cache exists but is not valid JSON.";
-    raw.textContent = cached;
+    info.textContent = "Cache exists but is invalid JSON.";
+    console.error(e);
     return;
   }
 
-  info.textContent = "Products in cache: " + data.length;
+  info.textContent = `Total products in cache: ${products.length}`;
 
-  // Raw JSON
-  raw.textContent = JSON.stringify(data, null, 2);
-
-  // Plain item listing
-  data.forEach((item, index) => {
-    const div = document.createElement("div");
-    div.innerHTML = `
-      <strong>#${index + 1}</strong><br>
-      Title: ${item.title || "N/A"}<br>
-      Price: ${item.price || "N/A"}<br>
-      Source: ${item.source || "N/A"}<br>
-      Link: ${item.link || item.product_link || "N/A"}<br>
-      <hr>
-    `;
-    list.appendChild(div);
-  });
+  // Group dynamically
+  const groups = dynamicPriceGroups(products, 0.3); // 30% price jump threshold
+  displayGroups(groups);
 })();
 </script>
 
