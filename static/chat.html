@@ -8,9 +8,6 @@
 
 <h1>Raw Cache: lastSearchResults</h1>
 
-<button onclick="loadCache()">Load Cache</button>
-<button onclick="clearView()">Clear View</button>
-
 <p id="info"></p>
 
 <pre id="raw"></pre>
@@ -20,13 +17,10 @@
 <div id="list"></div>
 
 <script>
-function loadCache() {
+(function loadCache() {
   const info = document.getElementById("info");
   const raw = document.getElementById("raw");
   const list = document.getElementById("list");
-
-  raw.textContent = "";
-  list.innerHTML = "";
 
   const cached = localStorage.getItem("lastSearchResults");
 
@@ -46,10 +40,10 @@ function loadCache() {
 
   info.textContent = "Products in cache: " + data.length;
 
-  // Show raw JSON
+  // Raw JSON
   raw.textContent = JSON.stringify(data, null, 2);
 
-  // Show each item plainly
+  // Plain item listing
   data.forEach((item, index) => {
     const div = document.createElement("div");
     div.innerHTML = `
@@ -62,13 +56,7 @@ function loadCache() {
     `;
     list.appendChild(div);
   });
-}
-
-function clearView() {
-  document.getElementById("info").textContent = "";
-  document.getElementById("raw").textContent = "";
-  document.getElementById("list").innerHTML = "";
-}
+})();
 </script>
 
 </body>
