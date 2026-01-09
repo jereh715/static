@@ -2,57 +2,51 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Dynamic Price Groups Viewer</title>
+  <title>Price Groups (Up to 4)</title>
 </head>
 <body>
 
-<h1>Dynamic Price Groups Viewer</h1>
+<h1>Price Groups Viewer (Max 4 Groups)</h1>
 <p id="info"></p>
 
 <div id="groups"></div>
 
 <script>
-// ---------------- Parse price to numeric ----------------
+// ---------------- Helper: parse price ----------------
 function parsePrice(priceStr) {
   return parseFloat((priceStr || "").replace(/[^\d.]/g, "")) || 0;
 }
 
-// ---------------- Sort products ascending by price ----------------
-function sortByPrice(products) {
-  return products
-    .map(p => ({ ...p, numericPrice: parsePrice(p.price) }))
-    .sort((a, b) => a.numericPrice - b.numericPrice);
-}
+// ---------------- Main grouping function ----------------
+function createPriceGroups(products, maxGroups = 4) {
+  if (!products.length) return [];
 
-// ---------------- Dynamic price grouping ----------------
-// thresholdPercent: relative jump to start a new group
-function dynamicPriceGroups(products, thresholdPercent = 0.3) {
-  const sorted = sortByPrice(products);
+  // Add numeric price
+  const sorted = products.map(p => ({ ...p, numericPrice: parsePrice(p.price) }))
+                         .sort((a, b) => a.numericPrice - b.numericPrice);
+
+  const minPrice = sorted[0].numericPrice;
+  const maxPrice = sorted[sorted.length - 1].numericPrice;
+
+  // Compute price range per group
+  const range = maxPrice - minPrice;
+  const step = range / maxGroups;
+
   const groups = [];
-  let currentGroup = [];
 
-  sorted.forEach((p, i) => {
-    if (i === 0) {
-      currentGroup.push(p);
-    } else {
-      const prevPrice = sorted[i - 1].numericPrice;
-      const diff = p.numericPrice - prevPrice;
-
-      if (diff / prevPrice > thresholdPercent) {
-        // Start a new group
-        groups.push(currentGroup);
-        currentGroup = [p];
-      } else {
-        currentGroup.push(p);
-      }
+  for (let i = 0; i < maxGroups; i++) {
+    const lower = minPrice + i * step;
+    const upper = i === maxGroups - 1 ? maxPrice : lower + step;
+    const grpProducts = sorted.filter(p => p.numericPrice >= lower && p.numericPrice <= upper);
+    if (grpProducts.length > 0) {
+      groups.push({ lower, upper, products: grpProducts });
     }
-  });
+  }
 
-  if (currentGroup.length) groups.push(currentGroup);
   return groups;
 }
 
-// ---------------- Display grouped products ----------------
+// ---------------- Display groups ----------------
 function displayGroups(groups) {
   const container = document.getElementById("groups");
   container.innerHTML = "";
@@ -60,22 +54,17 @@ function displayGroups(groups) {
   groups.forEach((grp, idx) => {
     const groupDiv = document.createElement("div");
 
-    // Group header with price range
-    const prices = grp.map(p => p.numericPrice);
-    const min = Math.min(...prices);
-    const max = Math.max(...prices);
     const header = document.createElement("h2");
-    header.textContent = `Group ${idx + 1} | ${grp.length} products | Price: ${min} - ${max}`;
+    header.textContent = `Group ${idx + 1} | Price: ${grp.lower} - ${grp.upper} | ${grp.products.length} products`;
     groupDiv.appendChild(header);
 
-    // List products
-    grp.forEach(p => {
+    grp.products.forEach(p => {
       const div = document.createElement("div");
       div.innerHTML = `
         <strong>${p.title}</strong><br>
         Price: ${p.price}<br>
         Source: ${p.source || "N/A"}<br>
-        Link: <a href="${p.link || p.product_link || "#"}" target="_blank">${p.link || p.product_link || "N/A"}</a><br>
+        Link: <a href="${p.link || p.product_link || "#"}" target="_blank">view</a><br>
         Image: <a href="${p.image_url || "#"}" target="_blank">view</a>
         <hr>
       `;
@@ -90,6 +79,7 @@ function displayGroups(groups) {
 (function main() {
   const info = document.getElementById("info");
   const cached = localStorage.getItem("lastSearchResults");
+
   if (!cached) {
     info.textContent = "No lastSearchResults found in localStorage.";
     return;
@@ -106,8 +96,7 @@ function displayGroups(groups) {
 
   info.textContent = `Total products in cache: ${products.length}`;
 
-  // Group dynamically
-  const groups = dynamicPriceGroups(products, 0.3); // 30% price jump threshold
+  const groups = createPriceGroups(products, 4); // Max 4 groups
   displayGroups(groups);
 })();
 </script>
