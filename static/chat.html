@@ -2,33 +2,43 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Price Groups (Up to 4)</title>
+  <title>Price Groups (Ignoring Ranges)</title>
 </head>
 <body>
 
-<h1>Price Groups Viewer (Max 4 Groups)</h1>
+<h1>Price Groups Viewer (Ignoring Price Ranges)</h1>
 <p id="info"></p>
 
 <div id="groups"></div>
 
 <script>
-// ---------------- Helper: parse price ----------------
-function parsePrice(priceStr) {
-  return parseFloat((priceStr || "").replace(/[^\d.]/g, "")) || 0;
+// ---------------- Normalize price ----------------
+// Ignores ranges like "1200 - 2300"
+function normalizePrice(priceStr) {
+  if (!priceStr) return null; // null means ignore
+
+  if (priceStr.includes('-')) return null; // ignore range
+
+  // Remove commas and currency symbols
+  const clean = priceStr.replace(/,/g, '').replace(/[^\d.]/g, '').trim();
+
+  const num = parseFloat(clean);
+  return isNaN(num) ? null : num;
 }
 
-// ---------------- Main grouping function ----------------
+// ---------------- Create up to 4 price groups ----------------
 function createPriceGroups(products, maxGroups = 4) {
-  if (!products.length) return [];
+  // Filter products with valid single prices
+  const validProducts = products
+    .map(p => ({ ...p, numericPrice: normalizePrice(p.price) }))
+    .filter(p => p.numericPrice !== null)
+    .sort((a, b) => a.numericPrice - b.numericPrice);
 
-  // Add numeric price
-  const sorted = products.map(p => ({ ...p, numericPrice: parsePrice(p.price) }))
-                         .sort((a, b) => a.numericPrice - b.numericPrice);
+  if (!validProducts.length) return [];
 
-  const minPrice = sorted[0].numericPrice;
-  const maxPrice = sorted[sorted.length - 1].numericPrice;
+  const minPrice = validProducts[0].numericPrice;
+  const maxPrice = validProducts[validProducts.length - 1].numericPrice;
 
-  // Compute price range per group
   const range = maxPrice - minPrice;
   const step = range / maxGroups;
 
@@ -37,7 +47,9 @@ function createPriceGroups(products, maxGroups = 4) {
   for (let i = 0; i < maxGroups; i++) {
     const lower = minPrice + i * step;
     const upper = i === maxGroups - 1 ? maxPrice : lower + step;
-    const grpProducts = sorted.filter(p => p.numericPrice >= lower && p.numericPrice <= upper);
+
+    const grpProducts = validProducts.filter(p => p.numericPrice >= lower && p.numericPrice <= upper);
+
     if (grpProducts.length > 0) {
       groups.push({ lower, upper, products: grpProducts });
     }
