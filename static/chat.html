@@ -2,11 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Price Groups (Up to 10)</title>
+  <title>Smart Price Groups (Up to 10)</title>
 </head>
 <body>
 
-<h1>Price Groups Viewer (Ignoring Ranges, Max 10 Groups)</h1>
+<h1>Smart Price Groups Viewer</h1>
 <p id="info"></p>
 
 <div id="groups"></div>
@@ -21,33 +21,70 @@ function normalizePrice(priceStr) {
   return isNaN(num) ? null : num;
 }
 
-// ---------------- Create price groups ----------------
-function createPriceGroups(products, maxGroups = 10) {
-  const validProducts = products
+// ---------------- Smart grouping algorithm ----------------
+function createSmartPriceGroups(products, maxGroups = 10) {
+  // Normalize and sort
+  const valid = products
     .map(p => ({ ...p, numericPrice: normalizePrice(p.price) }))
-    .filter(p => p.numericPrice !== null)
+    .filter(p => p.numericPrice !== null && p.numericPrice > 0)
     .sort((a, b) => a.numericPrice - b.numericPrice);
 
-  if (!validProducts.length) return [];
+  if (!valid.length) return [];
 
-  const minPrice = validProducts[0].numericPrice;
-  const maxPrice = validProducts[validProducts.length - 1].numericPrice;
-  const range = maxPrice - minPrice;
-  const step = range / maxGroups;
+  // Log-transform prices
+  const logPrices = valid.map(p => Math.log10(p.numericPrice));
+  const minLog = logPrices[0];
+  const maxLog = logPrices[logPrices.length - 1];
 
-  const groups = [];
+  // Fallback: prices too similar → equal-count grouping
+  if (maxLog - minLog < 0.05) {
+    const size = Math.ceil(valid.length / maxGroups);
+    const groups = [];
 
-  for (let i = 0; i < maxGroups; i++) {
-    const lower = minPrice + i * step;
-    const upper = i === maxGroups - 1 ? maxPrice : lower + step;
+    for (let i = 0; i < valid.length; i += size) {
+      const chunk = valid.slice(i, i + size);
+      groups.push({
+        lower: chunk[0].numericPrice,
+        upper: chunk[chunk.length - 1].numericPrice,
+        products: chunk
+      });
+    }
 
-    const grpProducts = validProducts.filter(p => p.numericPrice >= lower && p.numericPrice <= upper);
-    if (grpProducts.length > 0) {
-      groups.push({ lower, upper, products: grpProducts });
+    return groups;
+  }
+
+  // Log-space buckets
+  const step = (maxLog - minLog) / maxGroups;
+  const buckets = Array.from({ length: maxGroups }, () => []);
+
+  valid.forEach((p, i) => {
+    const idx = Math.min(
+      Math.floor((logPrices[i] - minLog) / step),
+      maxGroups - 1
+    );
+    buckets[idx].push(p);
+  });
+
+  // Merge tiny buckets
+  const MIN_BUCKET_SIZE = Math.max(2, Math.floor(valid.length * 0.03));
+  const merged = [];
+
+  for (const bucket of buckets) {
+    if (!bucket.length) continue;
+
+    if (merged.length && bucket.length < MIN_BUCKET_SIZE) {
+      merged[merged.length - 1].push(...bucket);
+    } else {
+      merged.push([...bucket]);
     }
   }
 
-  return groups;
+  // Final groups
+  return merged.map(g => ({
+    lower: g[0].numericPrice,
+    upper: g[g.length - 1].numericPrice,
+    products: g
+  }));
 }
 
 // ---------------- Display groups ----------------
@@ -59,13 +96,13 @@ function displayGroups(groups) {
     const groupDiv = document.createElement("div");
 
     const header = document.createElement("h2");
-    header.textContent = `Group ${idx + 1} | Price: ${grp.lower} - ${grp.upper} | ${grp.products.length} products`;
+    header.textContent = `Group ${idx + 1} | Price: ${grp.lower.toFixed(2)} - ${grp.upper.toFixed(2)} | ${grp.products.length} products`;
     groupDiv.appendChild(header);
 
     grp.products.forEach(p => {
       const div = document.createElement("div");
       div.innerHTML = `
-        <strong>${p.title}</strong><br>
+        <strong>${p.title || "Untitled Product"}</strong><br>
         Price: ${p.price}<br>
         Source: ${p.source || "N/A"}<br>
         Link: <a href="${p.link || p.product_link || "#"}" target="_blank">view</a><br>
@@ -100,7 +137,7 @@ function displayGroups(groups) {
 
   info.textContent = `Total products in cache: ${products.length}`;
 
-  const groups = createPriceGroups(products, 10); // Max 10 groups
+  const groups = createSmartPriceGroups(products, 10);
   displayGroups(groups);
 })();
 </script>
