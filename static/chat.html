@@ -3,6 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <title>Smart Price Groups (Up to 10)</title>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.5; }
+    h2 { margin-top: 20px; }
+    .offer-group { color: green; border-bottom: 2px solid green; }
+    .product { margin-bottom: 10px; }
+  </style>
 </head>
 <body>
 
@@ -12,134 +18,139 @@
 <div id="groups"></div>
 
 <script>
-// ---------------- Normalize price ----------------
-function normalizePrice(priceStr) {
-  if (!priceStr) return null;
-  if (priceStr.includes('-')) return null; // ignore ranges
-  const clean = priceStr.replace(/,/g, '').replace(/[^\d.]/g, '').trim();
-  const num = parseFloat(clean);
-  return isNaN(num) ? null : num;
-}
-
-// ---------------- Smart grouping algorithm ----------------
-function createSmartPriceGroups(products, maxGroups = 10) {
-  // Normalize and sort
-  const valid = products
-    .map(p => ({ ...p, numericPrice: normalizePrice(p.price) }))
-    .filter(p => p.numericPrice !== null && p.numericPrice > 0)
-    .sort((a, b) => a.numericPrice - b.numericPrice);
-
-  if (!valid.length) return [];
-
-  // Log-transform prices
-  const logPrices = valid.map(p => Math.log10(p.numericPrice));
-  const minLog = logPrices[0];
-  const maxLog = logPrices[logPrices.length - 1];
-
-  // Fallback: prices too similar → equal-count grouping
-  if (maxLog - minLog < 0.05) {
-    const size = Math.ceil(valid.length / maxGroups);
-    const groups = [];
-
-    for (let i = 0; i < valid.length; i += size) {
-      const chunk = valid.slice(i, i + size);
-      groups.push({
-        lower: chunk[0].numericPrice,
-        upper: chunk[chunk.length - 1].numericPrice,
-        products: chunk
-      });
-    }
-
-    return groups;
+  // ---------------- Normalize price ----------------
+  function normalizePrice(priceStr) {
+    if (!priceStr) return null;
+    if (priceStr.includes('-')) return null; // ignore ranges
+    const clean = priceStr.replace(/,/g, '').replace(/[^\d.]/g, '').trim();
+    const num = parseFloat(clean);
+    return isNaN(num) ? null : num;
   }
 
-  // Log-space buckets
-  const step = (maxLog - minLog) / maxGroups;
-  const buckets = Array.from({ length: maxGroups }, () => []);
+  // ---------------- Smart grouping algorithm ----------------
+  function createSmartPriceGroups(products, maxGroups = 10) {
+    const valid = products
+      .map(p => ({ ...p, numericPrice: normalizePrice(p.price) }))
+      .filter(p => p.numericPrice !== null && p.numericPrice > 0)
+      .sort((a, b) => a.numericPrice - b.numericPrice);
 
-  valid.forEach((p, i) => {
-    const idx = Math.min(
-      Math.floor((logPrices[i] - minLog) / step),
-      maxGroups - 1
-    );
-    buckets[idx].push(p);
-  });
+    if (!valid.length) return [];
 
-  // Merge tiny buckets
-  const MIN_BUCKET_SIZE = Math.max(2, Math.floor(valid.length * 0.03));
-  const merged = [];
+    const logPrices = valid.map(p => Math.log10(p.numericPrice));
+    const minLog = logPrices[0];
+    const maxLog = logPrices[logPrices.length - 1];
 
-  for (const bucket of buckets) {
-    if (!bucket.length) continue;
-
-    if (merged.length && bucket.length < MIN_BUCKET_SIZE) {
-      merged[merged.length - 1].push(...bucket);
-    } else {
-      merged.push([...bucket]);
+    if (maxLog - minLog < 0.05) {
+      const size = Math.ceil(valid.length / maxGroups);
+      const groups = [];
+      for (let i = 0; i < valid.length; i += size) {
+        const chunk = valid.slice(i, i + size);
+        groups.push({
+          lower: chunk[0].numericPrice,
+          upper: chunk[chunk.length - 1].numericPrice,
+          products: chunk
+        });
+      }
+      return groups;
     }
-  }
 
-  // Final groups
-  return merged.map(g => ({
-    lower: g[0].numericPrice,
-    upper: g[g.length - 1].numericPrice,
-    products: g
-  }));
-}
+    const step = (maxLog - minLog) / maxGroups;
+    const buckets = Array.from({ length: maxGroups }, () => []);
 
-// ---------------- Display groups ----------------
-function displayGroups(groups) {
-  const container = document.getElementById("groups");
-  container.innerHTML = "";
-
-  groups.forEach((grp, idx) => {
-    const groupDiv = document.createElement("div");
-
-    const header = document.createElement("h2");
-    header.textContent = `Group ${idx + 1} | Price: ${grp.lower.toFixed(2)} - ${grp.upper.toFixed(2)} | ${grp.products.length} products`;
-    groupDiv.appendChild(header);
-
-    grp.products.forEach(p => {
-      const div = document.createElement("div");
-      div.innerHTML = `
-        <strong>${p.title || "Untitled Product"}</strong><br>
-        Price: ${p.price}<br>
-        Source: ${p.source || "N/A"}<br>
-        Link: <a href="${p.link || p.product_link || "#"}" target="_blank">view</a><br>
-        Image: <a href="${p.image_url || "#"}" target="_blank">view</a>
-        <hr>
-      `;
-      groupDiv.appendChild(div);
+    valid.forEach((p, i) => {
+      const idx = Math.min(Math.floor((logPrices[i] - minLog) / step), maxGroups - 1);
+      buckets[idx].push(p);
     });
 
-    container.appendChild(groupDiv);
-  });
-}
+    const MIN_BUCKET_SIZE = Math.max(2, Math.floor(valid.length * 0.03));
+    const merged = [];
+    for (const bucket of buckets) {
+      if (!bucket.length) continue;
+      if (merged.length && bucket.length < MIN_BUCKET_SIZE) {
+        merged[merged.length - 1].push(...bucket);
+      } else {
+        merged.push([...bucket]);
+      }
+    }
 
-// ---------------- Main ----------------
-(function main() {
-  const info = document.getElementById("info");
-  const cached = localStorage.getItem("lastSearchResults");
-
-  if (!cached) {
-    info.textContent = "No lastSearchResults found in localStorage.";
-    return;
+    return merged.map(g => ({
+      lower: g[0].numericPrice,
+      upper: g[g.length - 1].numericPrice,
+      products: g
+    }));
   }
 
-  let products;
-  try {
-    products = JSON.parse(cached);
-  } catch (e) {
-    info.textContent = "Cache exists but is invalid JSON.";
-    console.error(e);
-    return;
+  // ---------------- Display groups with Offer Group ----------------
+  function displayGroups(groups) {
+    const container = document.getElementById("groups");
+    container.innerHTML = "";
+    if (!groups.length) return;
+
+    // Find index of group with most products
+    let maxIndex = 0;
+    groups.forEach((g, i) => {
+      if (g.products.length > groups[maxIndex].products.length) {
+        maxIndex = i;
+      }
+    });
+
+    // Offer group = group BEFORE the largest group
+    const offerGroupIndex = maxIndex > 0 ? maxIndex - 1 : null;
+
+    groups.forEach((grp, idx) => {
+      const groupDiv = document.createElement("div");
+      const isOfferGroup = idx === offerGroupIndex;
+
+      const header = document.createElement("h2");
+      header.textContent =
+        `${isOfferGroup ? "🔥 OFFER GROUP | " : ""}` +
+        `Group ${idx + 1} | Price: ${grp.lower.toFixed(2)} - ${grp.upper.toFixed(2)} | ${grp.products.length} products`;
+
+      if (isOfferGroup) header.classList.add("offer-group");
+      groupDiv.appendChild(header);
+
+      grp.products.forEach(p => {
+        const div = document.createElement("div");
+        div.classList.add("product");
+        div.innerHTML = `
+          <strong>${p.title || "Untitled Product"}</strong><br>
+          Price: ${p.price}<br>
+          Source: ${p.source || "N/A"}<br>
+          Link: <a href="${p.link || p.product_link || "#"}" target="_blank">view</a><br>
+          Image: <a href="${p.image_url || "#"}" target="_blank">view</a>
+          <hr>
+        `;
+        groupDiv.appendChild(div);
+      });
+
+      container.appendChild(groupDiv);
+    });
   }
 
-  info.textContent = `Total products in cache: ${products.length}`;
+  // ---------------- Main ----------------
+  (function main() {
+    const info = document.getElementById("info");
+    const cached = localStorage.getItem("lastSearchResults");
 
-  const groups = createSmartPriceGroups(products, 10);
-  displayGroups(groups);
-})();
+    if (!cached) {
+      info.textContent = "No lastSearchResults found in localStorage.";
+      return;
+    }
+
+    let products;
+    try {
+      products = JSON.parse(cached);
+    } catch (e) {
+      info.textContent = "Cache exists but is invalid JSON.";
+      console.error(e);
+      return;
+    }
+
+    info.textContent = `Total products in cache: ${products.length}`;
+
+    const groups = createSmartPriceGroups(products, 10);
+    displayGroups(groups);
+  })();
 </script>
 
 </body>
