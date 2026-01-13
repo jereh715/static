@@ -3,7 +3,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const resultsDiv = document.getElementById("results");
   if (!resultsDiv) return;
 
-  // ---------- Create horizontal card container ----------
+  /* ===============================
+     CREATE HORIZONTAL CONTAINER
+  =============================== */
   const preProducts = document.createElement("div");
   preProducts.id = "pre-products";
   Object.assign(preProducts.style, {
@@ -16,7 +18,9 @@ document.addEventListener("DOMContentLoaded", () => {
     scrollBehavior: "smooth"
   });
 
-  // ---------- Create scroll dots (pill) ----------
+  /* ===============================
+     SCROLL DOTS (PILL)
+  =============================== */
   const pill = document.createElement("div");
   pill.id = "scroll-pill";
   Object.assign(pill.style, {
@@ -27,9 +31,8 @@ document.addEventListener("DOMContentLoaded", () => {
     marginBottom: "10px"
   });
 
-  const totalDots = 5;
   const dots = [];
-  for (let i = 0; i < totalDots; i++) {
+  for (let i = 0; i < 5; i++) {
     const dot = document.createElement("div");
     Object.assign(dot.style, {
       width: "10px",
@@ -42,40 +45,65 @@ document.addEventListener("DOMContentLoaded", () => {
     dots.push(dot);
   }
 
-  // ---------- Insert preProducts and pill persistently ----------
+  /* ===============================
+     INSERT PERSISTENTLY
+  =============================== */
   function ensurePreProducts() {
     if (!document.getElementById("pre-products")) {
       resultsDiv.prepend(pill);
       resultsDiv.prepend(preProducts);
     }
   }
+
   ensurePreProducts();
+  new MutationObserver(ensurePreProducts)
+    .observe(resultsDiv, { childList: true });
 
-  new MutationObserver(() => {
-    ensurePreProducts();
-  }).observe(resultsDiv, { childList: true });
-
-  // ---------- Update active dot based on scroll ----------
+  /* ===============================
+     SCROLL DOT UPDATE
+  =============================== */
   preProducts.addEventListener("scroll", () => {
-    const scrollLeft = preProducts.scrollLeft;
-    const cardWidth = preProducts.children[0]?.offsetWidth + 5 || 1; // width + gap
-    const index = Math.floor(scrollLeft / (cardWidth * 4)); // every 4 cards scroll
+    const card = preProducts.children[0];
+    if (!card) return;
+
+    const cardWidth = card.offsetWidth + 5;
+    const index = Math.floor(preProducts.scrollLeft / (cardWidth * 4));
+
     dots.forEach((dot, i) => {
       dot.style.backgroundColor = i === index ? "cyan" : "blue";
     });
   });
 
-  // ---------- Recalculate card widths on window resize ----------
-  window.addEventListener("resize", () => {
+  /* ===============================
+     RESPONSIVE CARD WIDTH
+  =============================== */
+  function updateCardWidths() {
     const cardWidth = (window.innerWidth - 10) / 3;
-    for (let i = 0; i < preProducts.children.length; i++) {
-      preProducts.children[i].style.width = `${cardWidth}px`;
-    }
-  });
+    [...preProducts.children].forEach(card => {
+      card.style.width = `${cardWidth}px`;
+    });
+  }
 
-  // ---------- Spinner-based offer fetching ----------
-  document.addEventListener("spinnerChange", async (e) => {
-    if (!e.detail.visible) return; // only when spinner turns ON
+  window.addEventListener("resize", updateCardWidths);
+
+  /* ===============================
+     LOAD CACHED OFFERS ON START
+  =============================== */
+  const cachedOffers = localStorage.getItem("lastFoundOffers");
+  if (cachedOffers) {
+    try {
+      const offers = JSON.parse(cachedOffers);
+      if (Array.isArray(offers) && offers.length) {
+        renderOfferCards(offers);
+      }
+    } catch (_) {}
+  }
+
+  /* ===============================
+     SPINNER → FETCH NEW OFFERS
+  =============================== */
+  document.addEventListener("spinnerChange", (e) => {
+    if (!e.detail.visible) return;
 
     const query = localStorage.getItem("lastSearchQuery");
     if (!query) return;
@@ -83,13 +111,22 @@ document.addEventListener("DOMContentLoaded", () => {
     fetchOffers(query);
   });
 
-  // ---------- Fetch offers API ----------
+  /* ===============================
+     FETCH OFFERS API
+  =============================== */
   async function fetchOffers(query) {
     try {
-      const res = await fetch(`http://127.0.0.1:5000/api/offers?q=${encodeURIComponent(query)}`);
+      const res = await fetch(
+        `http://127.0.0.1:5000/api/offers?q=${encodeURIComponent(query)}`
+      );
       const data = await res.json();
 
       if (data.status !== "success" || !Array.isArray(data.products)) return;
+
+      localStorage.setItem(
+        "lastFoundOffers",
+        JSON.stringify(data.products)
+      );
 
       renderOfferCards(data.products);
     } catch (err) {
@@ -97,9 +134,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // ---------- Render lightweight offer cards ----------
+  /* ===============================
+     RENDER OFFER CARDS
+  =============================== */
   function renderOfferCards(products) {
-    preProducts.innerHTML = ""; // clear old cards
+    preProducts.innerHTML = "";
 
     products.forEach((p) => {
       const card = document.createElement("div");
@@ -135,8 +174,8 @@ document.addEventListener("DOMContentLoaded", () => {
       preProducts.appendChild(card);
     });
 
-    // Show or hide pill based on number of cards
-    pill.style.display = products.length > 0 ? "flex" : "none";
+    updateCardWidths();
+    pill.style.display = products.length ? "flex" : "none";
   }
 
 });
