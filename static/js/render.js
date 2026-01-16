@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
     display: "flex",
     overflowX: "auto",
     gap: "5px",
-    marginTop: "120px",
+    marginTop: "100px",
     boxSizing: "border-box",
     scrollBehavior: "smooth"
   });
